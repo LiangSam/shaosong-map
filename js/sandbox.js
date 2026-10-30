@@ -88,7 +88,7 @@
     document.body.classList.add('sb-open');
     ov.querySelector('#sbTitle').textContent = b.title;
     ov.querySelector('#sbDate').textContent = `${b.date} · ${b.sub}`;
-    ov.querySelector('#sbBrief').textContent = b.brief;
+    ov.querySelector('#sbBrief').innerHTML = window.SS_ANNOTATE ? window.SS_ANNOTATE(b.brief) : esc(b.brief);
     ov.querySelector('#sbSteps').innerHTML = b.phases.map((p, i) => `<li data-i="${i}"><span>${i + 1}</span><div><b>${esc(p.title)}</b><small>${esc(p.time || '')}</small></div></li>`).join('');
     ov.querySelectorAll('#sbSteps li').forEach((li) => li.addEventListener('click', () => { stop(); go(+li.dataset.i); }));
     ov.querySelector('#sbProg').innerHTML = b.phases.map((_, i) => `<i data-i="${i}"></i>`).join('');
@@ -228,7 +228,7 @@
     ov.querySelector('#sbStepNo').textContent = `第 ${i + 1} / ${cur.phases.length} 步`;
     ov.querySelector('#sbStepTitle').textContent = ph.title;
     ov.querySelector('#sbStepTime').textContent = ph.time || '';
-    ov.querySelector('#sbStepText').textContent = ph.text;
+    ov.querySelector('#sbStepText').innerHTML = window.SS_ANNOTATE ? window.SS_ANNOTATE(ph.text) : esc(ph.text);
     ov.querySelectorAll('#sbSteps li').forEach((li) => li.classList.toggle('on', +li.dataset.i === i));
     ov.querySelectorAll('#sbProg i').forEach((d) => { d.classList.toggle('on', +d.dataset.i === i); d.classList.toggle('done', +d.dataset.i < i); });
     // 只在侧栏自身可滚动时（桌面端）滚动步骤列表，避免手机上把整页滚走

@@ -59,6 +59,7 @@
     const lbl = $('#progressLabel');
     if (!progress || progress === 'all') lbl.textContent = progress === 'all' ? '全书可见' : '阅读进度';
     else lbl.textContent = `读至 ${VOLS[progress.v - 1].n}·第${progress.c}章`;
+    $('#nextChBtn').hidden = !progress || progress === 'all';
   }
 
   // ── 地图 ──
@@ -252,11 +253,15 @@
   }
 
   // 城市
+  const PLACES_NOW = window.SS_PLACES_NOW || {};
+  const nowOf = (place) => { const k = Object.keys(PLACES_NOW).filter((n) => place.includes(n)).sort((a, b) => b.length - a.length)[0]; return k ? PLACES_NOW[k] : ''; };
   const cities = L.layerGroup();
   const cityMarkers = [];
   PTS.forEach((p, i) => {
     if (!p.n || p.lv < 1) return;
-    const m = L.marker([p.y, p.x], { pane: 'labels', interactive: false, icon: L.divIcon({ className: '', iconSize: [0, 0], html: `<div class="lbl lbl-city ${p.lv === 2 ? 'major' : 'minor'}"><i></i>${p.n}</div>` }) });
+    const now = PLACES_NOW[p.n];
+    const m = L.marker([p.y, p.x], { pane: 'labels', interactive: !!now, keyboard: false, icon: L.divIcon({ className: '', iconSize: [0, 0], html: `<div class="lbl lbl-city ${p.lv === 2 ? 'major' : 'minor'}${now ? ' has-now' : ''}"><i></i>${p.n}</div>` }) });
+    if (now) m.bindTooltip(`<b>${p.n}</b> · 今${now}`, { className: 'ev-tip', direction: 'top', offset: [0, -10] });
     m.addTo(cities); cityMarkers.push({ i, m });
   });
 
@@ -370,6 +375,7 @@
     drawTerritory(e.t, prevT !== e.t);
     drawDynamic(e, i);
     renderEvent();
+    renderOffices();
     markListActive();
     drawHead();
     if (opt.fly !== false) flyTo(e);
@@ -408,12 +414,12 @@
     body.innerHTML = `
       <div class="ev-head"><b>${esc(e.date)}</b><span>公元 ${1126 + ymOf(e.t).y}</span></div>
       <h2 class="ev-title">${esc(e.title)}</h2>
-      <div class="chips"><span class="chip type" style="--c:${ty.v}">${ty.icon}${ty.n}</span><span class="chip place"><span class="pin">📍</span>${esc(e.place)}</span></div>
-      <p class="ev-sum">${esc(e.sum)}</p>
+      <div class="chips"><span class="chip type" style="--c:${ty.v}">${ty.icon}${ty.n}</span><span class="chip place"><span class="pin">📍</span>${esc(e.place)}${nowOf(e.place) ? `<em class="now">今${esc(nowOf(e.place))}</em>` : ''}</span></div>
+      <p class="ev-sum">${annotate(e.sum)}</p>
       ${e.note ? `<p class="ev-note">${esc(e.note)}</p>` : ''}
       ${ppl ? `<div class="section-title">相关人物</div><div class="chips people">${ppl}</div>` : ''}
       ${battleFor(e) ? `<button class="sb-launch" data-battle="${battleFor(e).id}"><span>${TYPES.war.icon}</span><div><b>沙盘推演 · ${esc(battleFor(e).title)}</b><small>分 ${battleFor(e).phases.length} 步看懂这一仗怎么打</small></div><i>›</i></button>` : ''}
-      <div class="ev-src">原著：${chapterRef(e.ch)}</div>
+      <div class="ev-src"><span>原著：${chapterRef(e.ch)}</span><a class="ev-fix" target="_blank" rel="noopener" href="${fixUrl(e)}">纠错</a></div>
       <div class="ev-nav">
         <button data-go="${state.idx - 1}" ${prev ? '' : 'disabled'}><small>← 上一事</small>${prev ? esc(prev.title) : '—'}</button>
         <button data-go="${state.idx + 1}" ${next ? '' : 'disabled'}><small>下一事 →</small>${next ? esc(next.title) : (hiddenAfter ? '后文未读' : '全书终')}</button>
@@ -426,6 +432,8 @@
     body.querySelectorAll('[data-person]').forEach((b) => b.dataset.person && b.addEventListener('click', () => showPerson(b.dataset.person)));
   }
 
+  const REPO = 'https://github.com/LiangSam/shaosong-map';
+  const fixUrl = (e) => `${REPO}/issues/new?title=${encodeURIComponent('[纠错] ' + e.title)}&body=${encodeURIComponent(`事件：${e.title}（${e.date}）\n原著：${VOLS[e.ch[0] - 1].n} 第${e.ch[1]}章\n\n哪里有误：\n\n正确的应该是（最好附章节）：\n`)}`;
   const battleFor = (e) => { const b = window.SS_SANDBOX && window.SS_SANDBOX.forEvent(e.id); return b && canSee(b.ch) ? b : null; };
 
   // ── 侧栏：年表 ──
@@ -471,8 +479,8 @@
         <div class="p-seal">${esc(p.n.slice(-1))}</div>
         <div>
           <div class="p-name">${esc(p.n)}<small>${esc(p.g)}${p.aka ? ' · ' + esc(p.aka) : ''}</small></div>
-          <p class="p-intro">${esc(p.intro)}</p>
-          ${steps.length ? `<ul class="p-steps">${steps.map((s) => `<li><em>卷${cn(s[0])}·${s[1]}</em>${esc(s[2])}</li>`).join('')}</ul>` : ''}
+          <p class="p-intro">${annotate(p.intro)}</p>
+          ${steps.length ? `<ul class="p-steps">${steps.map((s) => `<li><em>卷${cn(s[0])}·${s[1]}</em>${annotate(s[2])}</li>`).join('')}</ul>` : ''}
           ${more ? `<div class="p-more">🔒 另有 ${more} 条后续经历，读到后解锁</div>` : ''}
           ${evs.length ? `<div class="p-evs">${evs.map(([e, i]) => `<button data-i="${i}">${esc(e.title)}</button>`).join('')}</div>` : ''}
         </div></div>`;
@@ -499,7 +507,8 @@
       <div class="section-title">事件类型</div><div class="legend-list">${Object.values(TYPES).map((t) => `<div><i class="sq" style="--c:${t.v}">${t.icon}</i>${t.n}</div>`).join('')}</div>
       <div class="about">
         <p>依据榴弹怕水《绍宋》原著整理，时间以小说内的建炎年号为准，月份为农历。事件摘要为转述，便于对照阅读；疆域按情节推算各州府归属后生成，仅为示意，并非精确的史实边界。</p>
-        <p>快捷键：← → 切换事件，空格播放。</p>
+        <p>快捷键：← → 切换事件，空格播放，<kbd>/</kbd> 搜索。</p>
+        <p>发现错漏？欢迎到 <a href="${REPO}/issues" target="_blank" rel="noopener">GitHub</a> 提出，最好附上原著章节。</p>
       </div>`;
     $('#layersBody').querySelectorAll('[data-style]').forEach((b) => b.addEventListener('click', () => setStyle(b.dataset.style)));
     $('#layersBody').querySelectorAll('.toggle').forEach((t) => {
@@ -652,11 +661,24 @@
   }
   function applyProgress(p) {
     progress = p; store.set('ss-progress', p); modal.hidden = true;
-    const cur = EV[state.idx] && EV[state.idx].id;
+    const before = new Set(EV.map((e) => e.id));
     refreshVisible(); buildMarks(); renderList(); renderPeople(); drawTimeline();
-    const keep = EV.findIndex((e) => e.id === cur);
-    select(keep >= 0 ? keep : EV.length - 1);
+    const fresh = EV.filter((e) => !before.has(e.id));
+    select(EV.length - 1);
+    if (p && p !== 'all') {
+      const title = CHAPTERS[p.v - 1][p.c - 1];
+      toast(`读至${VOLS[p.v - 1].n}第${p.c}章《${title}》` + (fresh.length ? ` · 新解锁 ${fresh.length} 件事：${fresh.slice(-2).map((e) => e.title).join('、')}` : ' · 本章没有新标注的大事'));
+    }
   }
+  function nextChapter() {
+    if (!progress || progress === 'all') return;
+    let { v, c } = progress;
+    if (c < CHAPTERS[v - 1].length) c++;
+    else if (v < CHAPTERS.length) { v++; c = 1; }
+    else return applyProgress('all');
+    applyProgress({ v, c });
+  }
+  $('#nextChBtn').addEventListener('click', nextChapter);
   $('#pmOk').addEventListener('click', () => {
     const c = +$('#chapterSelect').value;
     applyProgress(pickVol === 6 && c === CHAPTERS[5].length ? 'all' : { v: pickVol, c });
@@ -672,6 +694,154 @@
     const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
     root.dataset.theme = dark ? 'light' : 'dark';
     try { localStorage.setItem('ss-theme', root.dataset.theme); } catch (e) { /* 忽略 */ }
+  });
+
+  // ── 提示条 ──
+  const toastEl = $('#toast');
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.hidden = false;
+    toastEl.classList.remove('show'); void toastEl.offsetWidth; toastEl.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(() => { toastEl.hidden = true; }, 5200);
+  }
+
+  // ── 人事表 ──
+  const OFFICES = window.SS_OFFICES || [];
+  const SEG = ['#c4482f', '#35506f', '#9c7a2c', '#3d8a80', '#8a64a0', '#a0603a'];
+  const personLink = (n) => (peopleIdx[n] && canSee(peopleIdx[n].first) ? `<button class="of-name" data-person="${esc(n)}">${esc(n)}</button>` : `<span class="of-name">${esc(n)}</span>`);
+  const pct = (t) => (((Math.max(T0, Math.min(T1, t)) - T0) / (T1 - T0)) * 100).toFixed(2) + '%';
+  function renderOffices() {
+    const body = $('#officeBody');
+    const t = state.t, lim = maxT();
+    const { y, m } = ymOf(t);
+    let html = `<div class="of-now"><b>${yearName(y)} ${MONTHS[m]}</b>时的朝野格局<small>下方细条是十年间的任期，红线为此刻</small></div>`;
+    let g = '';
+    OFFICES.forEach((o) => {
+      const tens = o.ten.filter((x) => canSee(x.ch)).map((x) => { const shown = x.b != null && (!x.bch || canSee(x.bch)); return Object.assign({}, x, { end: shown ? x.b : null, note: [x.note, shown && x.bn].filter(Boolean).join('；') }); });
+      if (!tens.length) return;
+      if (o.g !== g) { if (g) html += '</div>'; g = o.g; html += `<div class="of-group"><h3>${esc(g)}</h3>`; }
+      const cur = tens.filter((x) => x.a <= t + 1e-6 && (x.end == null || x.end > t + 1e-6));
+      const holders = cur.length
+        ? cur.map((x) => `<span class="of-p${t - x.a < 2 && x.a > 0 ? ' fresh' : ''}">${personLink(x.p)}${t - x.a < 2 && x.a > 0 ? '<em>新任</em>' : ''}${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>`).join('')
+        : '<span class="of-none">此时空缺或未见于书中</span>';
+      const bars = tens.map((x, k) => {
+        const a = Math.max(T0, x.a), b = Math.min(x.end == null ? lim : x.end, lim);
+        return b > a ? `<i style="left:${pct(a)};width:calc(${pct(b)} - ${pct(a)});--c:${SEG[k % SEG.length]}" title="${esc(x.p)}"></i>` : '';
+      }).join('');
+      html += `<div class="of-row"><div class="of-l" title="${esc(o.d)}"><b>${esc(o.n)}</b><small>${esc(o.d)}</small></div><div class="of-h">${holders}</div>
+        <div class="of-bar">${bars}${lim < T1 ? `<u style="left:${pct(lim)}"></u>` : ''}<em style="left:${pct(t)}"></em></div></div>`;
+    });
+    if (g) html += '</div>';
+    html += '<p class="about">任免时间依原著推定，部分起止为约数；只显示你已读到的任命与卸任。</p>';
+    body.innerHTML = html;
+    body.querySelectorAll('[data-person]').forEach((b) => b.addEventListener('click', () => showPerson(b.dataset.person)));
+  }
+
+  // ── 名词解释 ──
+  const GLOSS = window.SS_GLOSSARY || [];
+  const termOf = {};
+  GLOSS.forEach((g) => { termOf[g.t] = g; (g.a || []).forEach((a) => { termOf[a] = g; }); });
+  const termRe = new RegExp(Object.keys(termOf).sort((a, b) => b.length - a.length).join('|'), 'g');
+  function annotate(text) {
+    const seen = new Set();
+    return esc(text).replace(termRe, (w) => {
+      const g = termOf[w];
+      if (seen.has(g.t)) return w;
+      seen.add(g.t);
+      return `<button type="button" class="term" data-term="${esc(g.t)}">${w}</button>`;
+    });
+  }
+  window.SS_ANNOTATE = annotate;
+  const pop = el('div', 'term-pop');
+  pop.hidden = true;
+  pop.setAttribute('role', 'dialog');
+  document.body.appendChild(pop);
+  function showTerm(name, anchor) {
+    const g = termOf[name];
+    if (!g) return;
+    pop.innerHTML = `<div class="tp-head"><b>${esc(g.t)}</b><small>${esc(g.c)}</small></div><p>${esc(g.d)}</p>${g.a && g.a.length ? `<div class="tp-aka">又作：${g.a.map(esc).join('、')}</div>` : ''}`;
+    pop.hidden = false;
+    const r = anchor.getBoundingClientRect(), w = Math.min(300, innerWidth - 24);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), innerWidth - w - 12) + 'px';
+    pop.style.top = r.bottom + 8 + 'px';
+    const h = pop.offsetHeight;
+    if (r.bottom + 8 + h > innerHeight - 12) pop.style.top = Math.max(12, r.top - h - 8) + 'px';
+  }
+  document.addEventListener('click', (ev) => {
+    const t = ev.target.closest && ev.target.closest('.term');
+    if (t) { ev.preventDefault(); ev.stopPropagation(); showTerm(t.dataset.term, t); return; }
+    if (!pop.hidden && !pop.contains(ev.target)) pop.hidden = true;
+  }, true);
+  const glossModal = $('#glossModal');
+  function openGlossary() {
+    const cats = [...new Set(GLOSS.map((g) => g.c))];
+    $('#glossBody').innerHTML = cats.map((c) => `<section><h3>${esc(c)}</h3><dl>${GLOSS.filter((g) => g.c === c).map((g) => `<div id="g-${esc(g.t)}"><dt>${esc(g.t)}${g.a && g.a.length ? `<small>${g.a.map(esc).join('、')}</small>` : ''}</dt><dd>${esc(g.d)}</dd></div>`).join('')}</dl></section>`).join('');
+    glossModal.hidden = false;
+  }
+  $('#glossBtn').addEventListener('click', openGlossary);
+  $('#glossClose').addEventListener('click', () => { glossModal.hidden = true; });
+  glossModal.addEventListener('click', (ev) => { if (ev.target === glossModal) glossModal.hidden = true; });
+
+  // ── 搜索 ──
+  const sModal = $('#searchModal'), sInput = $('#searchInput'), sList = $('#searchList');
+  let sItems = [], sActive = 0, sShown = [];
+  let placePopup = null;
+  function buildSearch() {
+    sItems = [];
+    EV.forEach((e, i) => sItems.push({ k: '事件', t: e.title, s: `${e.date} · ${e.place}`, q: e.title + e.place + e.date + (e.people || []).join(' ') + nowOf(e.place), go: () => { stopPlay(); select(i); switchTab('event'); } }));
+    PEOPLE.filter((p) => canSee(p.first)).forEach((p) => sItems.push({ k: '人物', t: p.n, s: [p.g, p.aka].filter(Boolean).join(' · '), q: p.n + (p.aka || ''), go: () => showPerson(p.n) }));
+    (window.SS_SANDBOX ? window.SS_SANDBOX.list() : []).filter((b) => canSee(b.ch)).forEach((b) => sItems.push({ k: '沙盘', t: b.title, s: b.date, q: b.title + b.sub, go: () => window.SS_SANDBOX.open(b.id) }));
+    const seen = new Set();
+    PTS.forEach((p) => {
+      if (!p.n || seen.has(p.n)) return;
+      seen.add(p.n);
+      const now = PLACES_NOW[p.n] || '';
+      sItems.push({ k: '地名', t: p.n, s: now ? '今' + now : '', q: p.n + now, go: () => {
+        map.flyTo([p.y, p.x], Math.max(map.getZoom(), 7), { duration: 0.8 });
+        if (placePopup) map.closePopup(placePopup);
+        placePopup = L.popup({ className: 'place-pop', closeButton: false, offset: [0, -6] }).setLatLng([p.y, p.x]).setContent(`<b>${esc(p.n)}</b>${now ? ` · 今${esc(now)}` : ''}`).openOn(map);
+      } });
+    });
+    GLOSS.forEach((g) => sItems.push({ k: '名词', t: g.t, s: g.d, q: g.t + (g.a || []).join(' '), term: g.t }));
+  }
+  function runSearch() {
+    const q = sInput.value.trim();
+    const groups = {};
+    sShown = [];
+    if (q) sItems.forEach((it) => { if ((it.q + it.s).includes(q) && (groups[it.k] = groups[it.k] || []).length < 8) groups[it.k].push(it); });
+    const order = ['事件', '人物', '沙盘', '地名', '名词'];
+    let html = '';
+    order.forEach((k) => {
+      if (!groups[k]) return;
+      html += `<h4>${k}</h4>`;
+      groups[k].forEach((it) => { html += `<button class="sr" data-n="${sShown.length}"><b>${esc(it.t)}</b><small>${esc(it.s)}</small></button>`; sShown.push(it); });
+    });
+    sList.innerHTML = html || `<p class="muted sr-empty">${q ? '没有找到。只能搜到你已读到的内容。' : '输入人名、地名、事件或名词，例如：岳飞、下蔡、尧山、猛安'}</p>`;
+    sActive = 0; markActive();
+    sList.querySelectorAll('.sr').forEach((b) => b.addEventListener('click', () => pick(+b.dataset.n, b)));
+  }
+  function markActive() { sList.querySelectorAll('.sr').forEach((b) => b.classList.toggle('on', +b.dataset.n === sActive)); }
+  function pick(n, anchor) {
+    const it = sShown[n];
+    if (!it) return;
+    if (it.term) { showTerm(it.term, anchor || sInput); return; }
+    closeSearch();
+    it.go();
+  }
+  function openSearch() { buildSearch(); sModal.hidden = false; sInput.value = ''; runSearch(); setTimeout(() => sInput.focus(), 20); }
+  function closeSearch() { sModal.hidden = true; pop.hidden = true; }
+  sInput.addEventListener('input', runSearch);
+  sInput.addEventListener('keydown', (ev) => {
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); sActive = Math.min(sShown.length - 1, sActive + 1); markActive(); }
+    else if (ev.key === 'ArrowUp') { ev.preventDefault(); sActive = Math.max(0, sActive - 1); markActive(); }
+    else if (ev.key === 'Enter') { ev.preventDefault(); pick(sActive, sList.querySelector('.sr.on')); }
+  });
+  $('#searchBtn').addEventListener('click', openSearch);
+  sModal.addEventListener('click', (ev) => { if (ev.target === sModal) closeSearch(); });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') { pop.hidden = true; if (!sModal.hidden) closeSearch(); if (!glossModal.hidden) glossModal.hidden = true; }
+    const typing = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+    if (!typing && (ev.key === '/' || ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k')) && sModal.hidden && modal.hidden && !document.body.classList.contains('sb-open')) { ev.preventDefault(); openSearch(); }
   });
 
   // ── 启动 ──

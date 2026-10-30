@@ -6,6 +6,13 @@
   <title>绍宋舆图 · 建炎十年</title>
   <meta name="description" content="《绍宋》（榴弹怕水）读书地图：以时间线串起建炎元年至十年的战事、人事与疆域变化，可按阅读进度隐藏剧透。" />
   <meta name="theme-color" content="#efe6d2" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="绍宋舆图" />
+  <meta property="og:title" content="绍宋舆图 · 建炎十年读书地图" />
+  <meta property="og:description" content="《绍宋》读书地图：建炎十年的时间线、疆域、人事与战役沙盘推演，可按阅读进度防剧透。" />
+  <meta property="og:url" content="https://shaosong.liangmouyin.com/" />
+  <meta property="og:image" content="https://shaosong.liangmouyin.com/assets/og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="vendor/leaflet.css" />
   <link rel="stylesheet" href="css/style.css" />
@@ -28,10 +35,17 @@
       <span class="now-sub" id="nowSub">公元 1127</span>
     </div>
     <div class="top-actions">
+      <button class="icon-btn" id="searchBtn" title="搜索（/）" aria-label="搜索">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7" /><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /></svg>
+      </button>
+      <button class="icon-btn" id="glossBtn" title="名词解释" aria-label="名词解释">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10 5 7.5 4.5 4 4.5v14c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2v-14c-3.5 0-6 .5-8 2zM12 6.5v14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>
+      </button>
       <button class="pill" id="progressBtn" title="设置阅读进度，隐藏之后的剧情">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5a2.5 2.5 0 0 0 0 5H20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
         <span id="progressLabel">阅读进度</span>
       </button>
+      <button class="pill next-ch" id="nextChBtn" title="跟读：读完一章，地图跟着往前走" hidden>+1 章</button>
       <button class="icon-btn" id="themeBtn" title="切换明暗" aria-label="切换明暗">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>
       </button>
@@ -47,11 +61,13 @@
       <div class="sheet-grip" id="sheetGrip" aria-hidden="true"></div>
       <nav class="tabs" role="tablist">
         <button role="tab" class="tab active" data-tab="event">纪事</button>
+        <button role="tab" class="tab" data-tab="office">人事</button>
         <button role="tab" class="tab" data-tab="people">人物</button>
         <button role="tab" class="tab" data-tab="list">年表</button>
         <button role="tab" class="tab" data-tab="layers">图层</button>
       </nav>
       <section class="tab-body active" data-body="event" id="eventBody"></section>
+      <section class="tab-body" data-body="office" id="officeBody"></section>
       <section class="tab-body" data-body="people">
         <div class="filters" id="peopleFilters"></div>
         <div class="people" id="peopleList"></div>
@@ -86,6 +102,23 @@
     </div>
   </div>
 
+  <div class="modal" id="searchModal" hidden>
+    <div class="modal-card search-card" role="dialog" aria-modal="true" aria-label="搜索">
+      <input id="searchInput" type="search" placeholder="搜索人名、地名、事件、名词…" autocomplete="off" />
+      <div class="search-list" id="searchList"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="glossModal" hidden>
+    <div class="modal-card gloss-card" role="dialog" aria-modal="true" aria-labelledby="glossTitle">
+      <div class="gloss-head"><h2 id="glossTitle">名词解释</h2><button class="icon-btn" id="glossClose" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg></button></div>
+      <p class="muted">正文里带虚线的词都可以点开看解释。</p>
+      <div id="glossBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
   <script src="vendor/leaflet.js"></script>
   <script src="vendor/d3-delaunay.min.js"></script>
   <script src="data/geo.js"></script>
@@ -94,6 +127,9 @@
   <script src="data/people.js"></script>
   <script src="data/chapters.js"></script>
   <script src="data/battles.js"></script>
+  <script src="data/offices.js"></script>
+  <script src="data/glossary.js"></script>
+  <script src="data/places.js"></script>
   <script src="js/sandbox.js"></script>
   <script src="js/app.js"></script>
 </body>

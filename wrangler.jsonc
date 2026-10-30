@@ -1,0 +1,7 @@
+{
+  // 纯静态站点：Cloudflare Workers 静态资源托管，绑定子域名
+  "name": "shaosong-map",
+  "compatibility_date": "2026-10-23",
+  "assets": { "directory": "." },
+  "routes": [{ "pattern": "shaosong.liangmouyin.com", "custom_domain": true }]
+}

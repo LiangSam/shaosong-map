@@ -14,6 +14,8 @@ data/events.js      84 条编年事件（时间、地点、人物、摘要、原
 data/world.js       势力配色、约 260 个州府控制点、疆域变化（PHASES）
 data/people.js      人物档案（按章节解锁的经历）
 data/chapters.js    六卷章节标题（阅读进度选择用）
+data/battles.js     四场战役的沙盘推演数据（部署、阶段、箭头、镜头）
+js/sandbox.js       沙盘推演引擎
 data/geo.js         海岸线、河湖（Natural Earth，已裁剪简化），外加北宋末黄河、汴河、梁山泊
 vendor/             Leaflet 1.9.4、d3-delaunay 6.0.4
 ```
@@ -47,17 +49,19 @@ python3 -m http.server 8765 --directory ~/Developer/projects/shaosong-map
 
 然后打开 http://localhost:8765
 
-## 部署到子域名（Cloudflare Pages）
+## 部署
 
-博客的 DNS 已经在 Cloudflare 上，所以子域名最省事的做法是单独建一个 Pages 项目：
+线上地址：https://shaosong.liangmouyin.com
+
+站点用 Cloudflare Workers 的静态资源托管，配置在 `wrangler.jsonc`，子域名也写在里面，部署时会自动绑定。改完后在项目目录运行：
 
 ```bash
-npx wrangler pages deploy ~/Developer/projects/shaosong-map --project-name shaosong-map
+npx -y wrangler@4.40.0 deploy
 ```
 
-第一次运行会让你登录 Cloudflare。部署完成后，在 Cloudflare 控制台的 Workers & Pages → shaosong-map → Custom domains 里添加 `shaosong.liangmouyin.com`，DNS 记录会自动创建。
+`.assetsignore` 列出了不会上传的文件（`.git`、README、配置文件等）。
 
-另一种做法是把这个文件夹推到一个新的 GitHub 仓库，再在 Pages 里连接它，以后每次 push 自动部署（构建命令留空，输出目录填 `/`）。
+注意：wrangler 4.156 在绑定自定义域名时会报 “This Worker does not exist”，所以这里固定用 4.40.0。
 
 ## 资料说明
 

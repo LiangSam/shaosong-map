@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>绍宋舆图 · 建炎十年</title>
+  <meta name="description" content="《绍宋》（榴弹怕水）读书地图：以时间线串起建炎元年至十年的战事、人事与疆域变化，可按阅读进度隐藏剧透。" />
+  <meta name="theme-color" content="#efe6d2" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="vendor/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script>
+    try { var th = localStorage.getItem('ss-theme'); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
+    try { document.documentElement.dataset.style = JSON.parse(localStorage.getItem('ss-style')) || 'yutu'; } catch (e) { document.documentElement.dataset.style = 'yutu'; }
+  </script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="seal" aria-hidden="true">绍<br />宋</span>
+      <div class="brand-text">
+        <h1>绍宋舆图</h1>
+        <p>建炎元年 — 建炎十年 · 读书地图</p>
+      </div>
+    </div>
+    <div class="now" id="now" aria-live="polite">
+      <span class="now-era" id="nowEra">建炎元年</span>
+      <span class="now-sub" id="nowSub">公元 1127</span>
+    </div>
+    <div class="top-actions">
+      <button class="pill" id="progressBtn" title="设置阅读进度，隐藏之后的剧情">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5a2.5 2.5 0 0 0 0 5H20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+        <span id="progressLabel">阅读进度</span>
+      </button>
+      <button class="icon-btn" id="themeBtn" title="切换明暗" aria-label="切换明暗">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div id="map" class="map" aria-label="历史地图"></div>
+    <div class="map-legend" id="mapLegend"></div>
+    <div class="cartouche" id="cartouche" aria-hidden="true"><b id="cartYear">建炎元年</b><span id="cartMonth">八月</span><small id="cartAd">公元1127</small></div>
+
+    <aside class="panel" id="panel">
+      <div class="sheet-grip" id="sheetGrip" aria-hidden="true"></div>
+      <nav class="tabs" role="tablist">
+        <button role="tab" class="tab active" data-tab="event">纪事</button>
+        <button role="tab" class="tab" data-tab="people">人物</button>
+        <button role="tab" class="tab" data-tab="list">年表</button>
+        <button role="tab" class="tab" data-tab="layers">图层</button>
+      </nav>
+      <section class="tab-body active" data-body="event" id="eventBody"></section>
+      <section class="tab-body" data-body="people">
+        <div class="filters" id="peopleFilters"></div>
+        <div class="people" id="peopleList"></div>
+      </section>
+      <section class="tab-body" data-body="list" id="listBody"></section>
+      <section class="tab-body" data-body="layers" id="layersBody"></section>
+    </aside>
+  </main>
+
+  <footer class="timeline" id="timeline">
+    <div class="tl-controls">
+      <button class="icon-btn" id="prevBtn" title="上一事（←）" aria-label="上一事"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+      <button class="icon-btn play" id="playBtn" title="自动播放（空格）" aria-label="播放"><svg viewBox="0 0 24 24"><path id="playIcon" d="M8 5v14l11-7z" fill="currentColor" /></svg></button>
+      <button class="icon-btn" id="nextBtn" title="下一事（→）" aria-label="下一事"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+    </div>
+    <div class="tl-track" id="tlTrack"><svg id="tlSvg" role="slider" aria-label="时间轴" tabindex="0"></svg></div>
+  </footer>
+
+  <div class="modal" id="progressModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+      <h2 id="pmTitle">你读到哪儿了？</h2>
+      <p class="muted">地图只展示你已读过的剧情：之后的事件、人物结局与疆域变化都会隐藏。随时可以在右上角修改。</p>
+      <div class="vol-grid" id="volGrid"></div>
+      <label class="field">
+        <span>读到第几章</span>
+        <select id="chapterSelect"></select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn ghost" id="pmAll">已读完 / 不怕剧透</button>
+        <button class="btn primary" id="pmOk">就读到这里</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="vendor/leaflet.js"></script>
+  <script src="vendor/d3-delaunay.min.js"></script>
+  <script src="data/geo.js"></script>
+  <script src="data/world.js"></script>
+  <script src="data/events.js"></script>
+  <script src="data/people.js"></script>
+  <script src="data/chapters.js"></script>
+  <script src="data/battles.js"></script>
+  <script src="js/sandbox.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

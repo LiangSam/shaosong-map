@@ -14,6 +14,7 @@
     cav: { n: '骑兵', i: ico('<path d="M6 21c0-3 1-5.5 3-7l-3-2 1.5-4.5L12 4l2-1 1 2 3 2.5 1 3.5-2 1-2.5-1.5-.5 3.5 2 7"/><circle cx="14" cy="7.3" r=".6" fill="currentColor"/>') },
     heavy: { n: '重骑', i: ico('<path d="M6 21c0-3 1-5.5 3-7l-3-2 1.5-4.5L12 4l2-1 1 2 3 2.5 1 3.5-2 1-2.5-1.5-.5 3.5 2 7"/><path d="M4 21h16"/><path d="M9 14l3-2 2 1"/>') },
     bow: { n: '弓弩', i: ico('<path d="M6 3c7 2.5 7 15.5 0 18"/><path d="M6 3v18"/><path d="M6 12h13M16 9l3 3-3 3"/>') },
+    art: { n: '砲车', i: ico('<path d="M3 20h18"/><path d="M7 20l5-11 5 11"/><path d="M12 9 20 4"/><circle cx="20.5" cy="6.5" r="1.6"/>') },
     navy: { n: '水军', i: ico('<path d="M3 15h18l-3 5H6z"/><path d="M12 3v12M12 3l6 8h-6"/>') },
     hq: { n: '主帅', i: ico('<path d="M5 21V3"/><path d="M5 4h12l-3 4 3 4H5"/>') },
     emp: { n: '御驾', i: ico('<path d="M5 21V3"/><path d="M5 4h13l-3 4 3 4H5"/><circle cx="11" cy="8" r="1.6" fill="currentColor"/>') },
@@ -126,6 +127,18 @@
     cur.terrain.forEach((t) => {
       if (t.t === 'river') {
         L.polyline(t.pts.map(ll), { renderer: rTer, className: 'sb-river', weight: t.w || 4, interactive: false }).addTo(g);
+        lbl(t.pts[Math.floor(t.pts.length / 2)], t.n, 'water');
+      } else if (t.t === 'lake') {
+        L.polygon(t.pts.map(ll), { renderer: rTer, className: 'sb-lake', interactive: false }).addTo(g);
+        lbl(centroid(t.pts), t.n, 'water big');
+      } else if (t.t === 'shoal') {
+        L.polygon(t.pts.map(ll), { renderer: rTer, className: 'sb-shoal', interactive: false }).addTo(g);
+        lbl(centroid(t.pts), t.n, 'hill small');
+      } else if (t.t === 'wall') {
+        L.polygon(t.pts.map(ll), { renderer: rTer, className: 'sb-wall' + (t.outer ? ' outer' : ''), interactive: false }).addTo(g);
+        if (!t.outer) lbl(centroid(t.pts), t.n, 'city-name');
+      } else if (t.t === 'canal') {
+        L.polyline(t.pts.map(ll), { renderer: rTer, className: 'sb-canal', weight: 2.5, interactive: false }).addTo(g);
         lbl(t.pts[Math.floor(t.pts.length / 2)], t.n, 'water');
       } else if (t.t === 'dike') {
         L.polyline(t.pts.map(ll), { renderer: rTer, className: 'sb-dike', weight: 3, interactive: false }).addTo(g);

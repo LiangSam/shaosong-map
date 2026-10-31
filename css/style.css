@@ -569,7 +569,6 @@ body.sb-open { overflow: hidden; }
 .sb-unit .u-st { position: absolute; top: -9px; right: -9px; font-style: normal; font-family: var(--kai); font-size: 12px; font-weight: 700; color: #fff; background: #222;
   width: 18px; height: 18px; border-radius: 50%; display: none; place-items: center; }
 .sb-unit.k-emp, .sb-unit.k-hq { border-width: 2px; }
-.sb-unit.k-emp .u-ico { background: var(--accent); }
 .sb-unit.k-heavy { box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.4px var(--c), 0 2px 6px rgba(30, 20, 10, .22); }
 .sb-unit.act { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 30%, transparent), 0 3px 10px rgba(30, 20, 10, .3); }
 .sb-unit.st-rout { opacity: .62; border-style: dashed; filter: saturate(.5); }
@@ -691,4 +690,16 @@ button.of-name:hover { color: var(--accent); }
   #glossBody dl > div { grid-template-columns: 1fr; gap: 2px; }
   .of-row { grid-template-columns: 80px 1fr; }
   .pill.next-ch { padding: 0 8px; }
+}
+
+.sb-lake { fill: #7fa6bb; fill-opacity: .38; stroke: var(--water); stroke-opacity: .55; stroke-width: 1.4; }
+.sb-shoal { fill: #d8c48f; fill-opacity: .55; stroke: #a8915a; stroke-opacity: .7; stroke-width: 1.2; }
+.sb-wall { fill: var(--paper-2); fill-opacity: .5; stroke: var(--ink); stroke-opacity: .75; stroke-width: 3; }
+.sb-wall.outer { fill: none; stroke-width: 1.4; stroke-dasharray: 5 3; stroke-opacity: .5; }
+.sb-canal { fill: none; stroke: var(--water); stroke-opacity: .6; stroke-dasharray: 3 4; }
+.sb-lbl.water.big { font-size: 18px; letter-spacing: .6em; opacity: .75; }
+.sb-lbl.city-name { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: .1em; }
+@media (max-width: 440px) {
+  .brand-text { display: none; }
+  .top-actions { border-left: 0; padding-left: 0; margin-left: auto; gap: 6px; }
 }

@@ -703,3 +703,10 @@ button.of-name:hover { color: var(--accent); }
   .brand-text { display: none; }
   .top-actions { border-left: 0; padding-left: 0; margin-left: auto; gap: 6px; }
 }
+
+/* 朝野图入口 */
+a.icon-btn { color: var(--ink); text-decoration: none; }
+.of-link, .p-rel { display: inline-block; font-size: 13px; color: var(--accent); text-decoration: none; border-bottom: 1px dotted color-mix(in srgb, var(--accent) 60%, transparent); }
+.of-link { margin-bottom: 14px; font-size: 13.5px; }
+.p-rel { margin-top: 6px; font-size: 12px; }
+.of-link:hover, .p-rel:hover { border-bottom-style: solid; }

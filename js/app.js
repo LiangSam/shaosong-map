@@ -483,6 +483,7 @@
           ${steps.length ? `<ul class="p-steps">${steps.map((s) => `<li><em>卷${cn(s[0])}·${s[1]}</em>${annotate(s[2])}</li>`).join('')}</ul>` : ''}
           ${more ? `<div class="p-more">🔒 另有 ${more} 条后续经历，读到后解锁</div>` : ''}
           ${evs.length ? `<div class="p-evs">${evs.map(([e, i]) => `<button data-i="${i}">${esc(e.title)}</button>`).join('')}</div>` : ''}
+          <a class="p-rel" href="renshi.html?view=graph&p=${encodeURIComponent(p.n)}">在朝野图中看关系 →</a>
         </div></div>`;
     }).join('') + (hiddenPeople ? `<div class="locked">还有 ${hiddenPeople} 位人物尚未登场</div>` : '');
     $('#peopleList').querySelectorAll('.p-evs button').forEach((b) => b.addEventListener('click', () => { stopPlay(); select(+b.dataset.i); switchTab('event'); }));
@@ -713,7 +714,7 @@
     const body = $('#officeBody');
     const t = state.t, lim = maxT();
     const { y, m } = ymOf(t);
-    let html = `<div class="of-now"><b>${yearName(y)} ${MONTHS[m]}</b>时的朝野格局<small>下方细条是十年间的任期，红线为此刻</small></div>`;
+    let html = `<a class="of-link" href="renshi.html">打开朝野图：朝堂架构与人物关系 →</a><div class="of-now"><b>${yearName(y)} ${MONTHS[m]}</b>时的朝野格局<small>下方细条是十年间的任期，红线为此刻</small></div>`;
     let g = '';
     OFFICES.forEach((o) => {
       const tens = o.ten.filter((x) => canSee(x.ch)).map((x) => { const shown = x.b != null && (!x.bch || canSee(x.bch)); return Object.assign({}, x, { end: shown ? x.b : null, note: [x.note, shown && x.bn].filter(Boolean).join('；') }); });

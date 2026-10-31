@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>朝野图 · 绍宋舆图</title>
+  <meta name="description" content="《绍宋》建炎十年间的朝堂架构与人物关系：宰执、御营统帅、方面大员随时间更替，君臣、统属、亲属、政敌与宿敌一目了然，可按阅读进度防剧透。" />
+  <meta name="theme-color" content="#efe6d2" />
+  <meta property="og:title" content="朝野图 · 绍宋舆图" />
+  <meta property="og:description" content="《绍宋》建炎十年间的朝堂架构与人物关系，可按阅读进度防剧透。" />
+  <meta property="og:image" content="https://shaosong.liangmouyin.com/assets/og.jpg" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/style.css?v=10311008" />
+  <link rel="stylesheet" href="css/renshi.css?v=10311008" />
+  <script>
+    try { var th = localStorage.getItem('ss-theme'); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
+    try { document.documentElement.dataset.style = JSON.parse(localStorage.getItem('ss-style')) || 'yutu'; } catch (e) { document.documentElement.dataset.style = 'yutu'; }
+  </script>
+</head>
+<body class="rs">
+  <header class="top">
+    <a class="brand" href="index.html" title="回到舆图">
+      <span class="seal" aria-hidden="true">绍<br />宋</span>
+      <div class="brand-text">
+        <h1>朝野图</h1>
+        <p>建炎年间的官职与人物关系</p>
+      </div>
+    </a>
+    <div class="top-actions">
+      <a class="pill" href="index.html" id="backMap">← 回到舆图</a>
+      <button class="icon-btn" id="themeBtn" title="切换明暗" aria-label="切换明暗">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="rs-bar">
+    <div class="seg" role="tablist" id="viewSeg">
+      <button role="tab" data-view="org" class="on">朝堂架构</button>
+      <button role="tab" data-view="graph">人物关系</button>
+    </div>
+    <label class="rs-prog" title="只显示读到这里为止的人物、任免与关系">
+      <span>读至</span>
+      <select id="volSel" aria-label="卷"></select>
+      <select id="chSel" aria-label="章"></select>
+    </label>
+    <div class="rs-time" id="timeBox">
+      <span class="rs-now" id="nowLbl">建炎元年</span>
+      <input type="range" id="timeRange" min="0" max="100" step="0.25" aria-label="时间" />
+    </div>
+  </div>
+
+  <main class="rs-main">
+    <section class="rs-view" id="orgView"></section>
+    <section class="rs-view" id="graphView" hidden>
+      <div class="rs-filters" id="relFilters"></div>
+      <svg id="graphSvg" role="img" aria-label="人物关系图"></svg>
+      <p class="rs-hint">拖动平移，滚轮或双指缩放；点一个人只看他的关系。</p>
+    </section>
+    <aside class="rs-side" id="side"></aside>
+  </main>
+
+  <script src="data/world.js?v=10311008"></script>
+  <script src="data/events.js?v=10311008"></script>
+  <script src="data/people.js?v=10311008"></script>
+  <script src="data/offices.js?v=10311008"></script>
+  <script src="data/relations.js?v=10311008"></script>
+  <script src="data/chapters.js?v=10311008"></script>
+  <script src="js/renshi.js?v=10311008"></script>
+</body>
+</html>

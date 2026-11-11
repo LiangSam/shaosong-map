@@ -59,14 +59,42 @@
     const lbl = $('#progressLabel');
     if (!progress || progress === 'all') lbl.textContent = progress === 'all' ? '全书可见' : '阅读进度';
     else lbl.textContent = `读至 ${VOLS[progress.v - 1].n}·第${progress.c}章`;
+    const reading = progress && progress !== 'all';
+    $('#progressShort').textContent = reading ? `${cn(progress.v)}·${progress.c}` : '';
+    $('#progressBtn').classList.toggle('has-short', !!reading);
     $('#nextChBtn').hidden = !progress || progress === 'all';
   }
+
+  const narrow = () => matchMedia('(max-width: 860px)').matches;
 
   // ── 地图 ──
   const map = L.map('map', {
     zoomControl: false, minZoom: 4, maxZoom: 9, zoomSnap: 0.5, zoomDelta: 1, wheelPxPerZoomLevel: 100,
   }).setView([34.6, 113.2], 6);
   L.control.zoom({ position: 'topleft', zoomInTitle: '放大', zoomOutTitle: '缩小' }).addTo(map);
+  // 手机竖排时地图占了大半屏：单指留给页面滚动，双指才移动、缩放地图
+  const gestureHint = el('div', 'map-hint', '双指移动、缩放地图');
+  map.getContainer().appendChild(gestureHint);
+  function syncGestures() {
+    const twoFinger = narrow() && navigator.maxTouchPoints > 0;
+    if (twoFinger) map.dragging.disable(); else map.dragging.enable();
+    map.getContainer().classList.toggle('two-finger', twoFinger);
+  }
+  syncGestures();
+  let hintT = 0, hintStart = null;
+  map.getContainer().addEventListener('touchstart', (ev) => {
+    hintStart = ev.touches.length === 1 ? [ev.touches[0].clientX, ev.touches[0].clientY] : null;
+    if (!hintStart) gestureHint.classList.remove('show');
+  }, { passive: true });
+  map.getContainer().addEventListener('touchmove', (ev) => {
+    if (!hintStart || ev.touches.length !== 1 || map.dragging.enabled()) return;
+    const dx = Math.abs(ev.touches[0].clientX - hintStart[0]), dy = Math.abs(ev.touches[0].clientY - hintStart[1]);
+    // 横着拖说明是想移动地图而不是滚页面，这时才提示
+    if (dx < 24 || dx < dy * 1.5) return;
+    gestureHint.classList.add('show');
+    clearTimeout(hintT); hintT = setTimeout(() => gestureHint.classList.remove('show'), 1600);
+  }, { passive: true });
+
   map.attributionControl.setPrefix(false).addAttribution('底图 Natural Earth · 晕渲 © Esri · 疆域为示意');
 
   const pane = (name, z) => { const p = map.createPane(name); p.style.zIndex = z; return p; };
@@ -268,6 +296,7 @@
   // 行在路线 / 行军路线 / 事件标记
   const empGlow = L.polyline([], { renderer: rPaths, className: 'emp-path-glow', interactive: false });
   const empLine = L.polyline([], { renderer: rPaths, className: 'emp-path', interactive: false });
+  const empRecent = L.polyline([], { renderer: rPaths, className: 'emp-path emp-path-recent', interactive: false });
   const flagIcon = L.divIcon({ className: '', iconSize: [0, 0], html: '<div class="emp-flag"><svg viewBox="0 0 30 36"><path d="M5 2v33" stroke="currentColor" stroke-width="2" style="color:var(--ink)"/><path d="M6 3h20l-5 6 5 6H6z" fill="var(--accent)"/><text x="15" y="12.5" font-size="8" text-anchor="middle" fill="#fff" font-family="serif">纛</text></svg><span>行在</span></div>' });
   const flag = L.marker([0, 0], { pane: 'flag', icon: flagIcon, interactive: false });
   const routes = L.layerGroup();
@@ -314,7 +343,8 @@
     });
     // 行在
     const ep = empPositions(i);
-    empGlow.setLatLngs(ep); empLine.setLatLngs(ep);
+    const tail = ep.slice(-4);
+    empLine.setLatLngs(ep); empGlow.setLatLngs(tail); empRecent.setLatLngs(tail);
     if (ep.length) flag.setLatLng(ep[ep.length - 1]);
     // 行军箭头
     routes.clearLayers();
@@ -333,7 +363,7 @@
     tog(L_.terr, flash); tog(L_.terr, borders); tog(L_.terr, facLabels);
     tog(L_.water, water); tog(L_.water, geoLabels);
     tog(L_.cities, cities);
-    tog(L_.emp, empGlow); tog(L_.emp, empLine); tog(L_.emp, flag);
+    tog(L_.emp, empGlow); tog(L_.emp, empLine); tog(L_.emp, empRecent); tog(L_.emp, flag);
     tog(L_.marks, marks);
     routes.addTo(map);
     store.set('ss-layers', L_);
@@ -355,7 +385,7 @@
     const present = new Set(fac);
     const order = ['song', 'jin', 'qi', 'xia', 'xl', 'mg'];
     legend.innerHTML = order.filter((f) => present.has(f)).map((f) => `<span class="lg"><span class="sw" style="--c:${FACTIONS[f].color}"></span>${FACTIONS[f].name}</span>`).join('') +
-      `<span class="lg"><svg width="22" height="8"><path d="M1 4h20" stroke="var(--accent)" stroke-width="2.4" stroke-dasharray="1 5" stroke-linecap="round"/></svg>行在路线</span>` +
+      `<span class="lg lg-route"><svg width="22" height="8"><path d="M1 4h20" stroke="var(--accent)" stroke-width="2.4" stroke-dasharray="1 5" stroke-linecap="round"/></svg>行在路线</span>` +
       `<span class="phase">疆域 · ${esc(note)}</span>`;
   }
 
@@ -364,7 +394,7 @@
     if (!EV.length) return;
     i = Math.max(0, Math.min(EV.length - 1, i));
     const e = EV[i];
-    const prevT = state.t;
+    const prevT = state.t, moved = i !== state.idx;
     state.idx = i; state.t = e.t;
     const { y, m } = ymOf(e.t);
     $('#nowEra').textContent = yearName(y) + ' ' + MONTHS[m];
@@ -375,6 +405,7 @@
     drawTerritory(e.t, prevT !== e.t);
     drawDynamic(e, i);
     renderEvent();
+    if (moved && !narrow()) $('#eventBody').scrollTop = 0;
     renderOffices();
     markListActive();
     drawHead();
@@ -390,7 +421,7 @@
     const view = map.getBounds().pad(-0.18);
     if (view.contains(b)) return;
     if (e.routes && e.routes.length) map.flyToBounds(b.pad(0.25), { maxZoom: Math.max(map.getZoom(), 6.5), duration: 0.9 });
-    else map.flyTo(target, Math.max(map.getZoom(), 5.75), { duration: 0.9 });
+    else map.flyTo(target, Math.max(map.getZoom(), narrow() ? 5 : 5.75), { duration: 0.9 });
   }
 
   // ── 侧栏：纪事 ──
@@ -508,9 +539,11 @@
       <div class="section-title">事件类型</div><div class="legend-list">${Object.values(TYPES).map((t) => `<div><i class="sq" style="--c:${t.v}">${t.icon}</i>${t.n}</div>`).join('')}</div>
       <div class="about">
         <p>依据榴弹怕水《绍宋》原著整理，时间以小说内的建炎年号为准，月份为农历。事件摘要为转述，便于对照阅读；疆域按情节推算各州府归属后生成，仅为示意，并非精确的史实边界。</p>
+        <p><button type="button" class="linklike" id="aboutGuide">新读者导读：三分钟看懂背景 →</button></p>
         <p>快捷键：← → 切换事件，空格播放，<kbd>/</kbd> 搜索。</p>
         <p>发现错漏？欢迎到 <a href="${REPO}/issues" target="_blank" rel="noopener">GitHub</a> 提出，最好附上原著章节。</p>
       </div>`;
+    $('#aboutGuide').addEventListener('click', () => openGuide());
     $('#layersBody').querySelectorAll('[data-style]').forEach((b) => b.addEventListener('click', () => setStyle(b.dataset.style)));
     $('#layersBody').querySelectorAll('.toggle').forEach((t) => {
       const flip = () => { state.layers[t.dataset.k] = !state.layers[t.dataset.k]; applyLayers(); renderLayers(); if (state.layers.marks || state.layers.terr) select(state.idx, { fly: false }); };
@@ -530,7 +563,7 @@
 
   // ── 标签页 ──
   function switchTab(name) {
-    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab').forEach((t) => { const on = t.dataset.tab === name; t.classList.toggle('active', on); t.setAttribute('aria-selected', on); });
     document.querySelectorAll('.tab-body').forEach((b) => b.classList.toggle('active', b.dataset.body === name));
     if (name === 'list') markListActive();
   }
@@ -574,7 +607,7 @@
     s += `<line class="tl-axis" x1="${PAD}" x2="${TW - PAD}" y1="${TH / 2 + 4}" y2="${TH / 2 + 4}"/>`;
     EV.forEach((e, i) => {
       const x = xOf(e.t);
-      s += `<line class="tl-tick" data-i="${i}" x1="${x}" x2="${x}" y1="${TH / 2 - 8}" y2="${TH / 2 + 16}" stroke="${TYPES[e.type].v}"><title>${esc(e.date + ' ' + e.title)}</title></line>`;
+      s += `<line class="tl-tick" data-i="${i}" x1="${x}" x2="${x}" y1="${TH / 2 - 8}" y2="${TH / 2 + 16}" stroke="${TYPES[e.type].v}"/>`;
     });
     let lastEnd = -1e9;
     EV.forEach((e) => {
@@ -608,19 +641,43 @@
     for (let i = 0; i < EV.length; i++) if (EV[i].t <= t + 1e-6) k = i;
     return k;
   }
+  // 悬停 / 拖动时的提示：哪一天、哪件事
+  const tlTip = el('div', 'tl-tip');
+  tlTip.hidden = true;
+  $('#tlTrack').appendChild(tlTip);
+  function showTip(i) {
+    const e = EV[i];
+    if (!e) { tlTip.hidden = true; return; }
+    tlTip.innerHTML = `<i style="background:${TYPES[e.type].v}"></i><small>${esc(e.date)}</small>${esc(e.title)}`;
+    tlTip.hidden = false;
+    const w = tlTip.offsetWidth;
+    tlTip.style.left = Math.max(4, Math.min(TW - w - 4, xOf(e.t) - w / 2)) + 'px';
+  }
+  function nearestIdx(x, tol) {
+    let best = -1, bd = tol;
+    EV.forEach((e, i) => { const d = Math.abs(xOf(e.t) - x); if (d <= bd) { bd = d; best = i; } });
+    return best;
+  }
   let dragging = false;
   svg.addEventListener('pointerdown', (ev) => {
     if (ev.target.classList && ev.target.classList.contains('tl-tick')) return;
     dragging = true; svg.setPointerCapture(ev.pointerId); stopPlay(); scrub(ev);
   });
-  svg.addEventListener('pointermove', (ev) => { if (dragging) scrub(ev); });
-  svg.addEventListener('pointerup', (ev) => { if (!dragging) return; dragging = false; scrub(ev, true); });
+  svg.addEventListener('pointermove', (ev) => {
+    if (dragging) return scrub(ev);
+    if (ev.pointerType === 'touch') return;
+    showTip(nearestIdx(ev.clientX - svg.getBoundingClientRect().left, 7));
+  });
+  svg.addEventListener('pointerup', (ev) => { if (!dragging) return; dragging = false; scrub(ev, true); if (ev.pointerType === 'touch') tlTip.hidden = true; });
+  svg.addEventListener('pointercancel', () => { dragging = false; tlTip.hidden = true; });
+  svg.addEventListener('pointerleave', () => { if (!dragging) tlTip.hidden = true; });
   function scrub(ev, done) {
     const r = svg.getBoundingClientRect();
     const t = Math.max(T0, Math.min(maxT(), tOf(ev.clientX - r.left)));
     const i = idxAtT(t);
     if (i !== state.idx || done) select(i, { fly: !!done });
     drawHead(done ? null : t);
+    showTip(i);
   }
   svg.addEventListener('keydown', (ev) => {
     if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') { ev.preventDefault(); ev.stopPropagation(); stopPlay(); select(state.idx + (ev.key === 'ArrowRight' ? 1 : -1)); }
@@ -628,10 +685,11 @@
 
   // ── 播放 ──
   const playIcon = $('#playIcon');
-  function stopPlay() { state.playing = false; clearInterval(state.timer); playIcon.setAttribute('d', 'M8 5v14l11-7z'); $('#playBtn').setAttribute('aria-label', '播放'); }
+  function stopPlay() { state.playing = false; clearInterval(state.timer); $('#playBtn').classList.remove('playing'); playIcon.setAttribute('d', 'M8 5v14l11-7z'); $('#playBtn').setAttribute('aria-label', '播放'); }
   function startPlay() {
     if (state.idx >= EV.length - 1) select(0);
     state.playing = true; playIcon.setAttribute('d', 'M7 5h4v14H7zM13 5h4v14h-4z'); $('#playBtn').setAttribute('aria-label', '暂停');
+    $('#playBtn').classList.add('playing');
     state.timer = setInterval(() => { if (state.idx >= EV.length - 1) return stopPlay(); select(state.idx + 1); }, 4200);
   }
   $('#playBtn').addEventListener('click', () => (state.playing ? stopPlay() : startPlay()));
@@ -695,7 +753,19 @@
     const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
     root.dataset.theme = dark ? 'light' : 'dark';
     try { localStorage.setItem('ss-theme', root.dataset.theme); } catch (e) { /* 忽略 */ }
+    syncTheme();
   });
+  const MOON = '<path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />';
+  const SUN = '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />';
+  function syncTheme() {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    $('#themeBtn svg').innerHTML = dark ? SUN : MOON;
+    $('#themeBtn').title = dark ? '切换到宣纸（浅色）' : '切换到夜墨（深色）';
+    const meta = $('meta[name="theme-color"]');
+    if (meta) meta.content = getComputedStyle(root).getPropertyValue('--paper').trim() || meta.content;
+  }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);
 
   // ── 提示条 ──
   const toastEl = $('#toast');
@@ -783,6 +853,60 @@
   $('#glossClose').addEventListener('click', () => { glossModal.hidden = true; });
   glossModal.addEventListener('click', (ev) => { if (ev.target === glossModal) glossModal.hidden = true; });
 
+  // ── 新读者导读：只讲开篇前的背景和读懂这本书要用的常识，不含剧透 ──
+  const guideModal = $('#guideModal');
+  function openGuide() {
+    const fac = (f, body) => `<div class="g-fac" style="--c:${FACTIONS[f].color}"><b>${FACTIONS[f].full.replace(/（.*）/, '')}</b><p>${body}</p></div>`;
+    const early = PEOPLE.filter((p) => canSee(p.first) && (progress ? true : chKey(p.first) <= chKey([1, 12]))).slice(0, 8);
+    $('#guideBody').innerHTML = `
+      <p class="muted">不含剧透：只讲故事开始之前已经发生的事，和看懂这本书用得上的常识。</p>
+      <section><h3>这本书在讲什么</h3>
+        <p>一个现代工科大学生赵玖，醒来发现自己成了刚登基不久的宋朝皇帝赵构——书里人人叫他“${annotate('官家')}”。这是建炎元年（公元 1127 年）的秋天，他人在亳州明道宫，朝廷正准备一路往南逃。他决定不逃。全书六卷，写的就是这个决定之后的十年。</p></section>
+      <section><h3>开篇之前发生了什么</h3>
+        <ul class="g-list">
+          <li>北宋与金国结盟灭了辽国，却让金人看穿了宋军的虚实。</li>
+          <li>公元 1127 年，金军攻破都城东京（今开封），把徽宗、钦宗两位皇帝连同整个皇室掳往北方，史称“靖康之变”，书里说的“二圣”就是他们。</li>
+          <li>康王赵构当时不在城里，逃过一劫，被拥立为新君，年号“建炎”。</li>
+          <li>开篇时，黄河以北的河北、河东（今河北、山西）大半已经丢了，新朝廷手里只有一支东拼西凑的队伍。</li>
+        </ul></section>
+      <section><h3>先认识三方</h3>
+        <div class="g-facs">
+          ${fac('song', '丢了都城和大半个北方，但人口、钱粮仍然最多。缺的是能打的军队，和敢打的决心。')}
+          ${fac('jin', '女真人的国家，立国才十几年，已经灭辽、破宋，骑兵野战几乎无敌。军队分东、西两路，贵族们各有山头。')}
+          ${fac('xia', '党项人的国家，占着河套与横山，夹在宋、金之间看风向。')}
+        </div>
+        <p class="muted g-note">其他势力会随着你的阅读进度，陆续出现在地图上。</p></section>
+      <section><h3>地图怎么看：三条河、一座山</h3>
+        <ul class="g-list">
+          <li><b>黄河</b>　金军南下的第一道坎。当时的黄河下游走的是偏北的故道（图上土黄色那条），和今天的位置不一样。</li>
+          <li><b>淮河</b>　南北之间的分界线，也是第一卷的主战场。</li>
+          <li><b>长江</b>　再往南就是长江——朝中很多人想退到它后面去。</li>
+          <li><b>太行山</b>　隔开河东（山西）与河北。山以东是一马平川，都城东京就在这片平原上，无险可守。</li>
+        </ul>
+        <p class="muted g-note">地名看不懂时，鼠标移到城市上或点一下，会显示它今天叫什么。</p></section>
+      <section><h3>官职与军队，先记这几个</h3>
+        <p>${annotate('皇帝之下，最高一层的大臣合称宰执：东府管政务，西府管军事。御营是朝廷直属的野战军，一军的主将叫都统制，下面是统制官。金军按猛安、谋克编组，大致相当于千夫长、百夫长，再往上是万户。')}</p>
+        <p class="muted g-note">带虚线的词都可以点开看解释；全部名词在右上角的书本图标里。</p></section>
+      ${early.length ? `<section><h3>开头会遇到的人</h3><div class="g-people">${early.map((p) => `<button data-person="${esc(p.n)}" style="--c:${facColor(p.f)}"><i>${esc(p.n.slice(-1))}</i><span><b>${esc(p.n)}</b><small>${esc(p.g)}${p.aka ? ' · ' + esc(p.aka) : ''}</small></span></button>`).join('')}</div></section>` : ''}
+      <section><h3>这个网站怎么陪你读</h3>
+        <ol class="g-list g-steps">
+          <li><b>先设阅读进度。</b>地图只显示你读过的部分，后面的事件、人物结局、疆域变化都不会出现。每读完一章，点一下顶栏的“+1 章”。</li>
+          <li><b>跟着时间轴走。</b>拖动底部时间轴，或按键盘 ← →，一件事一件事地看：发生在哪、谁参与、在原著第几章。</li>
+          <li><b>打仗看不明白，点“沙盘推演”。</b>大战役都拆成了几步：谁在哪、往哪走、为什么这么打。</li>
+          <li><b>人太多记不住，去“朝野图”。</b>谁是宰相、谁管哪支军、谁和谁是什么关系，都随时间变化。</li>
+        </ol></section>
+      <div class="modal-actions"><button class="btn primary" id="guideOk">开始看地图</button></div>`;
+    guideModal.hidden = false;
+    guideModal.querySelector('.modal-card').scrollTop = 0;
+    $('#guideOk').addEventListener('click', closeGuide);
+    $('#guideBody').querySelectorAll('[data-person]').forEach((b) => b.addEventListener('click', () => { closeGuide(); showPerson(b.dataset.person); }));
+  }
+  function closeGuide() { guideModal.hidden = true; pop.hidden = true; }
+  $('#guideBtn').addEventListener('click', openGuide);
+  $('#guideClose').addEventListener('click', closeGuide);
+  guideModal.addEventListener('click', (ev) => { if (ev.target === guideModal) closeGuide(); });
+  $('#pmNew').addEventListener('click', () => { applyProgress({ v: 1, c: 1 }); toastEl.hidden = true; openGuide(); });
+
   // ── 搜索 ──
   const sModal = $('#searchModal'), sInput = $('#searchInput'), sList = $('#searchList');
   let sItems = [], sActive = 0, sShown = [];
@@ -840,7 +964,7 @@
   $('#searchBtn').addEventListener('click', openSearch);
   sModal.addEventListener('click', (ev) => { if (ev.target === sModal) closeSearch(); });
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape') { pop.hidden = true; if (!sModal.hidden) closeSearch(); if (!glossModal.hidden) glossModal.hidden = true; }
+    if (ev.key === 'Escape') { pop.hidden = true; if (!sModal.hidden) closeSearch(); if (!glossModal.hidden) glossModal.hidden = true; if (!guideModal.hidden) closeGuide(); }
     const typing = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
     if (!typing && (ev.key === '/' || ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k')) && sModal.hidden && modal.hidden && !document.body.classList.contains('sb-open')) { ev.preventDefault(); openSearch(); }
   });
@@ -859,8 +983,15 @@
   let start = hash ? EV.findIndex((e) => e.id === hash) : -1;
   if (start < 0) start = progress && progress !== 'all' ? EV.length - 1 : 0;
   select(start, { fly: false });
-  map.setView(ll(EV[start] ? EV[start].at : [113.2, 34.6]), 6);
+  map.setView(ll(EV[start] ? EV[start].at : [113.2, 34.6]), narrow() ? 5 : 6);
+  switchTab('event');
+  syncTheme();
+  addEventListener('hashchange', () => {
+    const id = (location.hash.match(/e=([\w-]+)/) || [])[1];
+    const k = id ? EV.findIndex((e) => e.id === id) : -1;
+    if (k >= 0 && k !== state.idx) { stopPlay(); select(k); }
+  });
   if (!progress) openModal();
   let rz;
-  addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { drawTimeline(); map.invalidateSize(); }, 120); });
+  addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { drawTimeline(); map.invalidateSize(); syncGestures(); }, 120); });
 })();

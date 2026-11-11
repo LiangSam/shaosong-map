@@ -131,7 +131,8 @@ button { font: inherit; color: inherit; }
 .river-he { stroke: var(--he); stroke-opacity: 0.9; }
 .canal { fill: none; stroke: var(--water); stroke-opacity: 0.55; stroke-dasharray: 2 3; }
 .lake { fill: var(--water); fill-opacity: 0.35; stroke: var(--water); stroke-opacity: 0.6; stroke-width: 0.6; }
-.emp-path { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-opacity: 0.75; stroke-dasharray: 1 6; stroke-linecap: round; }
+.emp-path { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-opacity: 0.26; stroke-dasharray: 1 6; stroke-linecap: round; }
+.emp-path-recent { stroke-width: 2.6; stroke-opacity: 0.85; }
 .emp-path-glow { fill: none; stroke: var(--accent); stroke-width: 7; stroke-opacity: 0.12; stroke-linecap: round; }
 .route { fill: none; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 9 7; animation: march 1.2s linear infinite; }
 @keyframes march { to { stroke-dashoffset: -16; } }
@@ -351,7 +352,7 @@ button { font: inherit; color: inherit; }
 .seg button + button { border-left: 1px solid var(--line-2); }
 .seg button.on { background: var(--ink); color: var(--paper); }
 
-:root[data-style="yutu"] { --terr-opacity: .07; --ribbon-w: .17; --ribbon-c: .4; --relief-opacity: .42; }
+:root[data-style="yutu"] { --terr-opacity: .11; --ribbon-w: .17; --ribbon-c: .4; --relief-opacity: .42; }
 @media (prefers-color-scheme: light) {
   :root[data-style="yutu"]:not([data-theme="dark"]) {
   --paper: #f3eddf; --paper-2: #eae2cf; --panel: #f6f1e5; --sea: #dde3dc; --land: #f6f0e2;
@@ -365,9 +366,9 @@ button { font: inherit; color: inherit; }
   --label-halo: rgba(246, 240, 226, .96);
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-style="yutu"]:not([data-theme="light"]) { --sea: #111418; --land: #1c1f23; --panel: #1a1c20; --terr-opacity: .1; --ribbon-w: .22; --ribbon-c: .5; --relief-opacity: .3; --water: #5b7d8f; }
+  :root[data-style="yutu"]:not([data-theme="light"]) { --sea: #111418; --land: #1c1f23; --panel: #1a1c20; --terr-opacity: .15; --ribbon-w: .22; --ribbon-c: .5; --relief-opacity: .3; --water: #5b7d8f; }
 }
-:root[data-style="yutu"][data-theme="dark"] { --sea: #111418; --land: #1c1f23; --panel: #1a1c20; --terr-opacity: .1; --ribbon-w: .22; --ribbon-c: .5; --relief-opacity: .3; --water: #5b7d8f; }
+:root[data-style="yutu"][data-theme="dark"] { --sea: #111418; --land: #1c1f23; --panel: #1a1c20; --terr-opacity: .15; --ribbon-w: .22; --ribbon-c: .5; --relief-opacity: .3; --water: #5b7d8f; }
 
 /* 地图 */
 [data-style="yutu"] .leaflet-container::after {
@@ -710,3 +711,78 @@ a.icon-btn { color: var(--ink); text-decoration: none; }
 .of-link { margin-bottom: 14px; font-size: 13.5px; }
 .p-rel { margin-top: 6px; font-size: 12px; }
 .of-link:hover, .p-rel:hover { border-bottom-style: solid; }
+
+/* ════════════════════════════════════════════
+   体验打磨：时间轴提示、播放进度、纪事切换、手机版
+   ════════════════════════════════════════════ */
+.pl-short { display: none; font-family: var(--sans); font-size: 12.5px; letter-spacing: .02em; }
+.tl-tip { position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 30; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 16px); overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 7px; padding: 5px 11px; background: var(--paper); color: var(--ink); border: 1px solid var(--line-2); border-radius: 6px; box-shadow: var(--shadow); font-size: 13.5px; line-height: 1.5; }
+.tl-tip[hidden] { display: none; }
+.tl-tip i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.tl-tip small { color: var(--muted); font-size: 12px; }
+.tl-controls .play { position: relative; }
+.tl-controls .play.playing::after { content: ""; position: absolute; left: 0; bottom: -7px; height: 2px; width: 100%; background: var(--accent); border-radius: 1px; transform-origin: left; animation: playbar 4.2s linear infinite; }
+@keyframes playbar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+#eventBody > * { animation: evin .32s ease-out both; }
+@keyframes evin { from { opacity: 0; transform: translateY(5px); } }
+@media (prefers-reduced-motion: reduce) {
+  #eventBody > * { animation: none; }
+  .tl-controls .play.playing::after { animation: none; }
+}
+@media (max-width: 860px) {
+  /* 图例收成一行，不再压住地图和版权行 */
+  .map-legend, [data-style="yutu"] .map-legend { left: 8px; bottom: 20px; max-width: calc(100% - 16px); flex-wrap: nowrap; gap: 0 10px; padding: 4px 9px; font-size: 11px; overflow-x: auto; scrollbar-width: none; box-shadow: none; }
+  [data-style="yutu"] .map-legend .sw { width: 10px; height: 10px; border-width: 2.5px; }
+  .map-legend .lg-route { display: none; }
+  /* 设了进度后，顶栏直接显示读到哪儿 */
+  .pill.has-short svg { display: none; }
+  .pill.has-short .pl-short { display: inline; }
+  .tl-tip { font-size: 13px; }
+}
+@media (max-width: 380px) {
+  .top { padding-left: 12px; padding-right: 12px; }
+  .top-actions { gap: 5px; }
+}
+/* 地图自成一层：Leaflet 内部的高 z-index 不再盖住时间轴提示和手机版吸顶的顶栏 */
+.map { isolation: isolate; }
+
+/* 手机：单指滚页面，双指动地图 */
+.map-hint { position: absolute; left: 50%; top: 50%; z-index: 900; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+  padding: 9px 16px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 86%, transparent); color: var(--paper); font-size: 14.5px; letter-spacing: .08em;
+  opacity: 0; transition: opacity .25s; }
+.map-hint.show { opacity: 1; }
+
+/* ════════════════════════════════════════════
+   新读者导读
+   ════════════════════════════════════════════ */
+.linklike { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; border-bottom: 1px dotted color-mix(in srgb, var(--accent) 60%, transparent); }
+.linklike:hover { border-bottom-style: solid; }
+.pm-new { margin: 14px 0 0 !important; font-size: 13.5px !important; color: var(--muted); }
+.guide-pill { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.guide-pill:hover { background: var(--accent); color: var(--accent-ink); }
+.guide-card { width: min(720px, 100%); }
+#guideBody > .muted { margin: 4px 0 0; font-size: 13.5px; }
+#guideBody section { margin-top: 20px; }
+#guideBody h3 { font-size: 13px; letter-spacing: .25em; color: var(--accent); margin: 0 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
+#guideBody section > p { margin: 0 0 6px; font-size: 15.5px; line-height: 1.95; text-align: justify; }
+#guideBody .g-note { font-size: 13px !important; margin-top: 8px !important; }
+.g-list { margin: 0; padding-left: 1.3em; font-size: 15px; line-height: 1.9; }
+.g-list li { margin: 3px 0; }
+.g-list li::marker { color: var(--gold); }
+.g-steps li { margin: 7px 0; }
+.g-facs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.g-fac { padding: 10px 12px 11px; border: 1px solid var(--line-2); border-top: 3px solid var(--c); border-radius: 4px; background: color-mix(in srgb, var(--c) 6%, transparent); }
+.g-fac b { font-size: 17px; letter-spacing: .15em; color: var(--c); }
+.g-fac p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.75; color: var(--ink-2); }
+.g-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.g-people button { display: grid; grid-template-columns: 34px 1fr; gap: 9px; align-items: center; text-align: left; padding: 7px 9px; border: 1px solid var(--line-2); border-radius: 6px; background: none; cursor: pointer; }
+.g-people button:hover { border-color: var(--accent); }
+.g-people i { width: 34px; height: 34px; display: grid; place-items: center; font-style: normal; font-family: var(--kai); font-size: 17px; font-weight: 700; color: #fff; background: var(--c); border-radius: 3px; }
+.g-people b { display: block; font-size: 15px; }
+.g-people small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+@media (max-width: 860px) {
+  .guide-pill { display: none; }
+  .g-facs { grid-template-columns: 1fr; }
+  .guide-card { padding: 20px 18px 18px; }
+}

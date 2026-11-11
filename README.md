@@ -10,14 +10,14 @@
 index.html          舆图主页面
 renshi.html         朝野图：朝堂架构（随时间更替）与人物关系图
 css/style.css       样式（宣纸 / 夜墨两套配色）
-js/app.js           地图、时间轴、面板、防剧透逻辑
+js/app.js           地图、时间轴、面板、防剧透逻辑、新读者导读
 js/renshi.js        朝野图逻辑
 css/renshi.css      朝野图样式
 data/events.js      96 条编年事件（时间、地点、人物、摘要、原著章节、行军路线、行在位置）
 data/world.js       势力配色、约 260 个州府控制点、疆域变化（PHASES）
 data/people.js      人物档案（按章节解锁的经历）
 data/chapters.js    六卷章节标题（阅读进度选择用）
-data/battles.js     七场战役的沙盘推演数据（部署、阶段、箭头、镜头）
+data/battles.js     十四场战役的沙盘推演数据（部署、阶段、箭头、镜头）
 data/offices.js     人事表：各职位任期（含防剧透的揭晓章节）
 data/glossary.js    名词解释（官制、军制、金制、地理）
 data/places.js      古今地名对照

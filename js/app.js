@@ -71,41 +71,6 @@
   const map = L.map('map', {
     zoomControl: false, minZoom: 4, maxZoom: 9, zoomSnap: 0.5, zoomDelta: 1, wheelPxPerZoomLevel: 100,
   }).setView([34.6, 113.2], 6);
-  // 连续滚轮缩放：Leaflet 自带的滚轮缩放是“攒一下、跳半级、播 0.25 秒动画”，触控板上一顿一顿的。
-  // 这里改成每帧向目标级别靠拢，鼠标所指的位置保持不动，松手后再做一次完整重绘。
-  window.SS_SMOOTH_WHEEL = function (m) {
-    m.scrollWheelZoom.disable();
-    const c = m.getContainer();
-    let goal = 0, raf = 0, last = 0, pt = null, anchor = null;
-    function frame(now) {
-      const z = m.getZoom(), dz = goal - z;
-      const k = 1 - Math.exp(-Math.min(64, now - last) / 85);
-      last = now;
-      const done = Math.abs(dz) < 0.004;
-      const nz = done ? goal : z + dz * k;
-      const off = pt.subtract(m.getSize().divideBy(2));
-      m._move(m.unproject(m.project(anchor, nz).subtract(off), nz), nz);
-      if (done) { raf = 0; c.classList.remove('is-zooming'); m._moveEnd(true); return; }
-      raf = requestAnimationFrame(frame);
-    }
-    c.addEventListener('wheel', (ev) => {
-      if (ev.target.closest && ev.target.closest('.map-legend, .leaflet-control')) return;
-      ev.preventDefault();
-      const d = L.DomEvent.getWheelDelta(ev);
-      if (!d) return;
-      if (!raf) { m.stop(); goal = m.getZoom(); }
-      goal = Math.max(m.getMinZoom(), Math.min(m.getMaxZoom(), goal + d / (ev.ctrlKey ? 7 : 70)));
-      pt = m.mouseEventToContainerPoint(ev);
-      anchor = m.containerPointToLatLng(pt);
-      if (!raf && Math.abs(goal - m.getZoom()) > 0.004) {
-        c.classList.add('is-zooming');
-        m._moveStart(true, false);
-        last = performance.now();
-        raf = requestAnimationFrame(frame);
-      }
-    }, { passive: false });
-  };
-  window.SS_SMOOTH_WHEEL(map);
   L.control.zoom({ position: 'topleft', zoomInTitle: '放大', zoomOutTitle: '缩小' }).addTo(map);
   // 手机竖排时地图占了大半屏：单指留给页面滚动，双指才移动、缩放地图
   const gestureHint = el('div', 'map-hint', '双指移动、缩放地图');
@@ -138,13 +103,44 @@
   const R = (p) => L.svg({ pane: p, padding: 0.35 }).addTo(map);
   const rBase = R('base'), rWater = R('water'), rBorder = R('border'), rPaths = R('paths');
 
-  const relief = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', {
-    maxNativeZoom: 13, maxZoom: 9, crossOrigin: true, updateWhenZooming: false, keepBuffer: 3,
+  // 淡墨晕渲：瓦片加载时就把灰度地形图换算成“墨色 + 透明度”画进 canvas。
+  // 黑色按 (1 − 亮度) 的透明度盖上去，结果与正片叠底相同，但之后拖动、缩放时不需要任何实时混合或滤镜。
+  const INK = { light: { c: [86, 60, 32], k: 0.92, max: 0.78 }, dark: { c: [228, 216, 192], k: 0.34, max: 0.4 } };
+  const inkLayers = [];
+  const InkRelief = L.TileLayer.extend({
+    createTile(coords, done) {
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 256;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        // willReadFrequently：用内存画布而不是显卡画布，避免逐张瓦片回读像素、再占一份显存
+        const ctx = cv.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, 256, 256);
+        try {
+          const ink = INK[document.documentElement.dataset.mode === 'dark' ? 'dark' : 'light'];
+          const d = ctx.getImageData(0, 0, 256, 256), px = d.data;
+          for (let i = 0; i < px.length; i += 4) {
+            const lum = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) / 255;
+            const a = Math.min(ink.max, Math.max(0, (1 - lum * 1.1) * ink.k));
+            px[i] = ink.c[0]; px[i + 1] = ink.c[1]; px[i + 2] = ink.c[2]; px[i + 3] = a * 255;
+          }
+          ctx.putImageData(d, 0, 0);
+        } catch (e) { cv.style.opacity = 0.35; /* 读不到像素（跨域受限）时退回半透明原图 */ }
+        done(null, cv);
+      };
+      img.onerror = (e) => done(e, cv);
+      img.src = this.getTileUrl(coords);
+      return cv;
+    },
   });
+  window.SS_INK_RELIEF = (opt) => { const l = new InkRelief('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', opt); inkLayers.push(l); return l; };
+  const relief = window.SS_INK_RELIEF({ maxNativeZoom: 13, maxZoom: 9, updateWhenZooming: false, keepBuffer: 3 });
 
   // 陆地（同时作为疆域裁剪路径）；先画一圈海岸晕线
   const landLL = GEO.land.map((poly) => poly.map((ring) => ring.map(ll)));
-  ['coast-halo h3', 'coast-halo h2', 'coast-halo'].forEach((cls) => L.polygon(landLL, { renderer: rBase, className: cls, fill: false, interactive: false, smoothFactor: 1.2 }).addTo(map));
+  L.polygon(landLL, { renderer: rBase, className: 'coast-halo h2', fill: false, interactive: false, smoothFactor: 3 }).addTo(map);
+  L.polygon(landLL, { renderer: rBase, className: 'coast-halo', fill: false, interactive: false, smoothFactor: 1.2 }).addTo(map);
   const land = L.polygon(landLL, { renderer: rBase, className: 'land-shape', interactive: false, smoothFactor: 1.2 }).addTo(map);
   land._path.id = 'landpath';
   const svgDefs = (renderer, html) => {
@@ -812,7 +808,9 @@
     $('#themeBtn svg').innerHTML = dark ? SUN : MOON;
     $('#themeBtn').title = dark ? '切换到宣纸（浅色）' : '切换到夜墨（深色）';
     const meta = $('meta[name="theme-color"]');
-    root.dataset.mode = dark ? 'dark' : 'light';
+    const mode = dark ? 'dark' : 'light';
+    if (root.dataset.mode !== mode || !syncTheme._m) { root.dataset.mode = mode; if (syncTheme._m && syncTheme._m !== mode) inkLayers.forEach((l) => l._map && l.redraw()); }
+    syncTheme._m = mode;
     if (meta) meta.content = getComputedStyle(root).getPropertyValue('--paper').trim() || meta.content;
   }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);

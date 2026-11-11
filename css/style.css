@@ -800,14 +800,14 @@ a.icon-btn { color: var(--ink); text-decoration: none; }
 .top, .panel, .timeline, .modal-card { background-image: var(--grain); }
 
 /* 墨：晕渲不再是一层灰照片，而是压在纸上的淡墨 */
-[data-mode="light"] .map .leaflet-tile-pane { mix-blend-mode: multiply; opacity: .78; filter: sepia(.55) saturate(.5) contrast(1.18) brightness(1.1); }
-[data-mode="dark"] .map .leaflet-tile-pane { mix-blend-mode: screen; opacity: .16; filter: invert(1) sepia(.4) brightness(.9) contrast(1.2); }
+/* 墨色已在瓦片加载时画好（见 app.js 的 InkRelief），这里不能再有 opacity / filter / 混合模式，否则每一帧都要重新合成 */
+.map .leaflet-tile-pane, .sb .leaflet-tile-pane { opacity: 1 !important; filter: none !important; mix-blend-mode: normal !important; }
 /* 四周压暗一圈，像卷轴的边 */
-.map::before { content: ""; position: absolute; inset: 0; z-index: 430; pointer-events: none; box-shadow: inset 0 0 90px rgba(92, 62, 24, .17), inset 0 0 14px rgba(92, 62, 24, .1); }
-[data-mode="dark"] .map::before { box-shadow: inset 0 0 110px rgba(0, 0, 0, .55); }
+/* 压暗用一张静态的径向渐变叠在纸纹那一层上，不额外增加覆盖层 */
+[data-style="yutu"] .leaflet-container::after { opacity: 1; background-image: radial-gradient(ellipse at center, transparent 55%, rgba(92, 62, 24, .16) 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .28 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+[data-style="yutu"][data-mode="dark"] .leaflet-container::after { opacity: 1; background-image: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, .5) 100%); }
 /* 海岸水线：三道由浓到淡 */
-[data-style="yutu"] .coast-halo.h2 { stroke-width: 15; stroke-opacity: .1; }
-[data-style="yutu"] .coast-halo.h3 { stroke-width: 26; stroke-opacity: .06; }
+[data-style="yutu"] .coast-halo.h2 { stroke-width: 18; stroke-opacity: .09; }
 [data-style="yutu"] .lbl-faction { font-family: var(--kai); font-weight: 700; opacity: .34; }
 [data-style="yutu"] .lbl-geo { letter-spacing: .6em; }
 
@@ -885,12 +885,10 @@ a.icon-btn { color: var(--ink); text-decoration: none; }
 }
 @media (max-width: 860px) {
   .panel, .timeline { box-shadow: none; }
-  .map::before { box-shadow: inset 0 0 50px rgba(92, 62, 24, .14); }
   .leaflet-top.leaflet-left .leaflet-control { margin: 10px 0 0 10px; }
 }
 /* 沙盘底图与主图同一种墨色；夜间疆域略收一点 */
-[data-mode="light"] .sb .leaflet-tile-pane { filter: sepia(.5) saturate(.5) contrast(1.12) brightness(1.04); opacity: .62; }
 [data-mode="dark"][data-style="yutu"] { --terr-opacity: .12; }
 
 /* 缩放、拖动期间暂停行军虚线的流动，把每一帧都留给地图 */
-.is-zooming .route, .is-zooming .sb-arrow, .leaflet-zoom-anim .route, .leaflet-dragging .route { animation-play-state: paused; }
+.leaflet-zoom-anim .route, .leaflet-dragging .route { animation-play-state: paused; }

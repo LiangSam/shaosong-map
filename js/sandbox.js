@@ -63,6 +63,7 @@
     }, true);
 
     map = L.map('sbMap', { center: [34, 113], zoom: 10, zoomControl: true, attributionControl: false, zoomSnap: 0.25, zoomDelta: 0.5, minZoom: 8, maxZoom: 16 });
+    if (window.SS_SMOOTH_WHEEL) window.SS_SMOOTH_WHEEL(map);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 13, maxZoom: 16, updateWhenZooming: false }).addTo(map);
     map.createPane('ter').style.zIndex = 350;
     map.createPane('arr').style.zIndex = 420;

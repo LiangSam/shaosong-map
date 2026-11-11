@@ -786,3 +786,111 @@ a.icon-btn { color: var(--ink); text-decoration: none; }
   .g-facs { grid-template-columns: 1fr; }
   .guide-card { padding: 20px 18px 18px; }
 }
+
+/* ════════════════════════════════════════════
+   质感与动效：纸、墨、印
+   ════════════════════════════════════════════ */
+:root {
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .28 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* 纸：顶栏、侧栏、时间轴与地图用同一种纸纹 */
+.top, .panel, .timeline, .modal-card { background-image: var(--grain); }
+
+/* 墨：晕渲不再是一层灰照片，而是压在纸上的淡墨 */
+[data-mode="light"] .map .leaflet-tile-pane { mix-blend-mode: multiply; opacity: .78; filter: sepia(.55) saturate(.5) contrast(1.18) brightness(1.1); }
+[data-mode="dark"] .map .leaflet-tile-pane { mix-blend-mode: screen; opacity: .16; filter: invert(1) sepia(.4) brightness(.9) contrast(1.2); }
+/* 四周压暗一圈，像卷轴的边 */
+.map::before { content: ""; position: absolute; inset: 0; z-index: 430; pointer-events: none; box-shadow: inset 0 0 90px rgba(92, 62, 24, .17), inset 0 0 14px rgba(92, 62, 24, .1); }
+[data-mode="dark"] .map::before { box-shadow: inset 0 0 110px rgba(0, 0, 0, .55); }
+/* 海岸水线：三道由浓到淡 */
+[data-style="yutu"] .coast-halo.h2 { stroke-width: 15; stroke-opacity: .1; }
+[data-style="yutu"] .coast-halo.h3 { stroke-width: 26; stroke-opacity: .06; }
+[data-style="yutu"] .lbl-faction { font-family: var(--kai); font-weight: 700; opacity: .34; }
+[data-style="yutu"] .lbl-geo { letter-spacing: .6em; }
+
+/* 缩放钮 */
+.leaflet-bar { border-radius: 3px !important; overflow: hidden; box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--line-2), 0 6px 16px rgba(60, 40, 20, .12) !important; border: 0 !important; }
+.leaflet-control-zoom a { width: 30px !important; height: 30px !important; line-height: 28px !important; font: 400 19px/28px var(--serif) !important; background: var(--paper) !important; border-bottom-color: var(--line) !important; transition: background-color .15s; }
+.leaflet-control-zoom a:hover { background: var(--paper-2) !important; }
+.leaflet-top.leaflet-left .leaflet-control { margin: 16px 0 0 16px; }
+
+/* 印：当前事件像一方印盖下去 */
+[data-style="yutu"] .ev-mark.now { animation: stamp .55s var(--ease) both; }
+@keyframes stamp { from { opacity: 0; transform: translate(-15px, -15px) rotate(-13deg) scale(1.9); } 55% { opacity: 1; } to { opacity: 1; transform: translate(-15px, -15px) rotate(-4deg) scale(1); } }
+[data-style="yutu"] .ev-mark.now::after { animation-duration: 2.6s; border-width: 1px; opacity: .7; }
+
+/* 题签换字 */
+.cartouche .flip { animation: flip .5s var(--ease); }
+@keyframes flip { from { opacity: 0; filter: blur(3px); transform: translateY(-5px); } }
+[data-style="yutu"] .cartouche { box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--line-2), 0 10px 26px rgba(60, 40, 20, .16); }
+
+/* 顶栏：图标钮去掉描边，靠底色表态 */
+.top { padding-top: 11px; padding-bottom: 11px; }
+.icon-btn { border-color: transparent; transition: background-color .15s, transform .12s var(--ease), border-color .15s; }
+.top .icon-btn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.pill { transition: background-color .15s, color .15s, transform .12s var(--ease); }
+.icon-btn:active, .pill:active, .btn:active, .ev-nav button:active:not(:disabled), .sb-launch:active, .vol-grid button:active { transform: scale(.96); }
+.tl-controls .icon-btn { border-color: var(--line-2); }
+.btn, .sb-launch, .vol-grid button, .ev-nav button { transition: transform .12s var(--ease), background-color .15s, border-color .15s, color .15s; }
+.seal { box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 3.5px var(--accent-ink), 0 2px 5px rgba(120, 30, 16, .28); transform: rotate(-2deg); }
+
+/* 侧栏：浮在地图上方的一页纸 */
+.panel { box-shadow: -18px 0 36px -26px rgba(60, 40, 20, .45); }
+.tab-body { scrollbar-color: var(--line-2) transparent; }
+.tabs { position: relative; }
+[data-style="yutu"] .tab { border-bottom-color: transparent !important; transition: color .2s; }
+.tabs::after { content: ""; position: absolute; left: 12px; bottom: -1px; height: 2px; width: calc((100% - 24px) / 5); background: var(--accent); transform: translateX(calc(var(--ti, 0) * 100%)); transition: transform .38s var(--ease); }
+.tab-body.active { animation: tabin .28s ease-out; }
+@keyframes tabin { from { opacity: 0; } }
+#eventBody > * { animation: evin .5s var(--ease) both; }
+#eventBody > *:nth-child(2) { animation-delay: 30ms; }
+#eventBody > *:nth-child(3) { animation-delay: 60ms; }
+#eventBody > *:nth-child(4) { animation-delay: 95ms; }
+#eventBody > *:nth-child(5) { animation-delay: 125ms; }
+#eventBody > *:nth-child(6) { animation-delay: 155ms; }
+#eventBody > *:nth-child(n+7) { animation-delay: 185ms; }
+@keyframes evin { from { opacity: 0; transform: translateY(8px); } }
+[data-style="yutu"] .ev-title { text-wrap: balance; }
+[data-style="yutu"] .ev-sum { text-wrap: pretty; }
+.ev-head, .tl-ad, .now-sub { font-variant-numeric: tabular-nums; }
+.li { transition: background-color .15s; }
+.sb-launch { box-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset, 0 4px 14px -8px rgba(120, 30, 16, .35); }
+
+/* 时间轴：游标是一枚小印，滑过去而不是跳过去 */
+#tlHead { transition: transform .5s var(--ease); }
+#tlHead.drag { transition: none; }
+.tl-knob { stroke-width: 2; filter: drop-shadow(0 1px 2px rgba(120, 30, 16, .4)); }
+.tl-head { stroke-width: 1.4; stroke-opacity: .75; }
+.tl-tick { transition: opacity .3s, stroke-width .15s; }
+[data-style="yutu"] .tl-tick { opacity: .85; }
+[data-style="yutu"] .tl-tick.future { opacity: .3; }
+[data-style="yutu"] .tl-tick:hover { opacity: 1; }
+.timeline { box-shadow: 0 -14px 30px -24px rgba(60, 40, 20, .4); }
+
+/* 弹窗 */
+.modal:not([hidden]) { animation: fadein .2s ease-out; }
+.modal:not([hidden]) .modal-card { animation: cardin .38s var(--ease); }
+@keyframes fadein { from { opacity: 0; } }
+@keyframes cardin { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+.modal-card { overscroll-behavior: contain; box-shadow: 0 0 0 4px var(--paper), 0 0 0 5px var(--line-2), 0 30px 70px -20px rgba(40, 26, 10, .45); border-radius: 6px; }
+.tl-tip, .term-pop { animation: fadein .14s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-style="yutu"] .ev-mark.now, .cartouche .flip, .tab-body.active, .modal:not([hidden]), .modal:not([hidden]) .modal-card, .tl-tip, .term-pop { animation: none; }
+  #tlHead, .tabs::after { transition: none; }
+  #eventBody > * { animation: none; }
+}
+@media (max-width: 860px) {
+  .panel, .timeline { box-shadow: none; }
+  .map::before { box-shadow: inset 0 0 50px rgba(92, 62, 24, .14); }
+  .leaflet-top.leaflet-left .leaflet-control { margin: 10px 0 0 10px; }
+}
+/* 沙盘底图与主图同一种墨色；夜间疆域略收一点 */
+[data-mode="light"] .sb .leaflet-tile-pane { filter: sepia(.5) saturate(.5) contrast(1.12) brightness(1.04); opacity: .62; }
+[data-mode="dark"][data-style="yutu"] { --terr-opacity: .12; }
+
+/* 缩放、拖动期间暂停行军虚线的流动，把每一帧都留给地图 */
+.is-zooming .route, .is-zooming .sb-arrow, .leaflet-zoom-anim .route, .leaflet-dragging .route { animation-play-state: paused; }

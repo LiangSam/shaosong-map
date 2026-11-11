@@ -71,6 +71,41 @@
   const map = L.map('map', {
     zoomControl: false, minZoom: 4, maxZoom: 9, zoomSnap: 0.5, zoomDelta: 1, wheelPxPerZoomLevel: 100,
   }).setView([34.6, 113.2], 6);
+  // 连续滚轮缩放：Leaflet 自带的滚轮缩放是“攒一下、跳半级、播 0.25 秒动画”，触控板上一顿一顿的。
+  // 这里改成每帧向目标级别靠拢，鼠标所指的位置保持不动，松手后再做一次完整重绘。
+  window.SS_SMOOTH_WHEEL = function (m) {
+    m.scrollWheelZoom.disable();
+    const c = m.getContainer();
+    let goal = 0, raf = 0, last = 0, pt = null, anchor = null;
+    function frame(now) {
+      const z = m.getZoom(), dz = goal - z;
+      const k = 1 - Math.exp(-Math.min(64, now - last) / 85);
+      last = now;
+      const done = Math.abs(dz) < 0.004;
+      const nz = done ? goal : z + dz * k;
+      const off = pt.subtract(m.getSize().divideBy(2));
+      m._move(m.unproject(m.project(anchor, nz).subtract(off), nz), nz);
+      if (done) { raf = 0; c.classList.remove('is-zooming'); m._moveEnd(true); return; }
+      raf = requestAnimationFrame(frame);
+    }
+    c.addEventListener('wheel', (ev) => {
+      if (ev.target.closest && ev.target.closest('.map-legend, .leaflet-control')) return;
+      ev.preventDefault();
+      const d = L.DomEvent.getWheelDelta(ev);
+      if (!d) return;
+      if (!raf) { m.stop(); goal = m.getZoom(); }
+      goal = Math.max(m.getMinZoom(), Math.min(m.getMaxZoom(), goal + d / (ev.ctrlKey ? 7 : 70)));
+      pt = m.mouseEventToContainerPoint(ev);
+      anchor = m.containerPointToLatLng(pt);
+      if (!raf && Math.abs(goal - m.getZoom()) > 0.004) {
+        c.classList.add('is-zooming');
+        m._moveStart(true, false);
+        last = performance.now();
+        raf = requestAnimationFrame(frame);
+      }
+    }, { passive: false });
+  };
+  window.SS_SMOOTH_WHEEL(map);
   L.control.zoom({ position: 'topleft', zoomInTitle: '放大', zoomOutTitle: '缩小' }).addTo(map);
   // 手机竖排时地图占了大半屏：单指留给页面滚动，双指才移动、缩放地图
   const gestureHint = el('div', 'map-hint', '双指移动、缩放地图');
@@ -109,7 +144,7 @@
 
   // 陆地（同时作为疆域裁剪路径）；先画一圈海岸晕线
   const landLL = GEO.land.map((poly) => poly.map((ring) => ring.map(ll)));
-  L.polygon(landLL, { renderer: rBase, className: 'coast-halo', fill: false, interactive: false, smoothFactor: 1.2 }).addTo(map);
+  ['coast-halo h3', 'coast-halo h2', 'coast-halo'].forEach((cls) => L.polygon(landLL, { renderer: rBase, className: cls, fill: false, interactive: false, smoothFactor: 1.2 }).addTo(map));
   const land = L.polygon(landLL, { renderer: rBase, className: 'land-shape', interactive: false, smoothFactor: 1.2 }).addTo(map);
   land._path.id = 'landpath';
   const svgDefs = (renderer, html) => {
@@ -389,6 +424,13 @@
       `<span class="phase">疆域 · ${esc(note)}</span>`;
   }
 
+  // 文字变了才换，并带一个轻微的“换字”动效
+  function flipText(node, txt) {
+    if (node.textContent === txt) return;
+    node.textContent = txt;
+    node.classList.remove('flip'); void node.offsetWidth; node.classList.add('flip');
+  }
+
   // ── 选中事件 ──
   function select(i, opt = {}) {
     if (!EV.length) return;
@@ -399,9 +441,9 @@
     const { y, m } = ymOf(e.t);
     $('#nowEra').textContent = yearName(y) + ' ' + MONTHS[m];
     $('#nowSub').textContent = '公元 ' + (1126 + y) + ' 年';
-    $('#cartYear').textContent = yearName(y);
-    $('#cartMonth').textContent = MONTHS[m];
-    $('#cartAd').textContent = '公元' + (1126 + y);
+    flipText($('#cartYear'), yearName(y));
+    flipText($('#cartMonth'), MONTHS[m]);
+    flipText($('#cartAd'), '公元' + (1126 + y));
     drawTerritory(e.t, prevT !== e.t);
     drawDynamic(e, i);
     renderEvent();
@@ -565,6 +607,7 @@
   function switchTab(name) {
     document.querySelectorAll('.tab').forEach((t) => { const on = t.dataset.tab === name; t.classList.toggle('active', on); t.setAttribute('aria-selected', on); });
     document.querySelectorAll('.tab-body').forEach((b) => b.classList.toggle('active', b.dataset.body === name));
+    $('.tabs').style.setProperty('--ti', [...document.querySelectorAll('.tab')].findIndex((t) => t.dataset.tab === name));
     if (name === 'list') markListActive();
   }
   document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => switchTab(t.dataset.tab)));
@@ -624,8 +667,9 @@
         if (TW - PAD - lx > 90) s += `<text class="tl-lock-lbl" x="${(lx + TW - PAD) / 2}" y="${TH / 2 + 8}" text-anchor="middle">未读 · 剧情已隐藏</text>`;
       }
     }
-    s += `<g id="tlHead"><line class="tl-head" y1="4" y2="${TH - 26}"/><circle class="tl-knob" r="7" cy="${TH / 2 + 4}"/></g>`;
+    s += `<g id="tlHead"><line class="tl-head" y1="4" y2="${TH - 26}"/><rect class="tl-knob" x="-6.5" y="${TH / 2 + 4 - 6.5}" width="13" height="13" rx="1.5" transform="rotate(45 0 ${TH / 2 + 4})"/></g>`;
     svg.innerHTML = s;
+    drawHead._i = -1;
     svg.querySelectorAll('.tl-tick').forEach((t) => t.addEventListener('click', (ev) => { ev.stopPropagation(); stopPlay(); select(+t.dataset.i); }));
     drawHead();
   }
@@ -633,7 +677,12 @@
     const g = $('#tlHead');
     if (!g || !TW) return;
     const x = xOf(tOverride != null ? tOverride : state.t);
-    g.setAttribute('transform', `translate(${x},0)`);
+    g.style.transform = `translateX(${x}px)`;
+    g.classList.toggle('drag', tOverride != null);
+    if (drawHead._i !== state.idx || drawHead._n !== EV.length) {
+      drawHead._i = state.idx; drawHead._n = EV.length;
+      svg.querySelectorAll('.tl-tick').forEach((t) => t.classList.toggle('future', +t.dataset.i > state.idx));
+    }
     svg.setAttribute('aria-valuetext', EV[state.idx] ? EV[state.idx].date + ' ' + EV[state.idx].title : '');
   }
   function idxAtT(t) {
@@ -763,6 +812,7 @@
     $('#themeBtn svg').innerHTML = dark ? SUN : MOON;
     $('#themeBtn').title = dark ? '切换到宣纸（浅色）' : '切换到夜墨（深色）';
     const meta = $('meta[name="theme-color"]');
+    root.dataset.mode = dark ? 'dark' : 'light';
     if (meta) meta.content = getComputedStyle(root).getPropertyValue('--paper').trim() || meta.content;
   }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);

@@ -17,9 +17,10 @@
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="vendor/leaflet.css" />
-  <link rel="stylesheet" href="css/style.css?v=11102000" />
+  <link rel="stylesheet" href="css/style.css?v=11111500" />
   <script>
     try { var th = localStorage.getItem('ss-theme'); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
+    document.documentElement.dataset.mode = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     try { document.documentElement.dataset.style = JSON.parse(localStorage.getItem('ss-style')) || 'yutu'; } catch (e) { document.documentElement.dataset.style = 'yutu'; }
   </script>
 </head>
@@ -138,16 +139,16 @@
 
   <script src="vendor/leaflet.js"></script>
   <script src="vendor/d3-delaunay.min.js"></script>
-  <script src="data/geo.js?v=11102000"></script>
-  <script src="data/world.js?v=11102000"></script>
-  <script src="data/events.js?v=11102000"></script>
-  <script src="data/people.js?v=11102000"></script>
-  <script src="data/chapters.js?v=11102000"></script>
-  <script src="data/battles.js?v=11102000"></script>
-  <script src="data/offices.js?v=11102000"></script>
-  <script src="data/glossary.js?v=11102000"></script>
-  <script src="data/places.js?v=11102000"></script>
-  <script src="js/sandbox.js?v=11102000"></script>
-  <script src="js/app.js?v=11102000"></script>
+  <script src="data/geo.js?v=11111500"></script>
+  <script src="data/world.js?v=11111500"></script>
+  <script src="data/events.js?v=11111500"></script>
+  <script src="data/people.js?v=11111500"></script>
+  <script src="data/chapters.js?v=11111500"></script>
+  <script src="data/battles.js?v=11111500"></script>
+  <script src="data/offices.js?v=11111500"></script>
+  <script src="data/glossary.js?v=11111500"></script>
+  <script src="data/places.js?v=11111500"></script>
+  <script src="js/sandbox.js?v=11111500"></script>
+  <script src="js/app.js?v=11111500"></script>
 </body>
 </html>
